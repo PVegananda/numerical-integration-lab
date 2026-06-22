@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekstensi — Kalkulator Integrasi Numerik</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563EB'/%3E%3Ctext x='32' y='46' font-family='Georgia,serif' font-size='40' fill='white' text-anchor='middle'%3E%E2%88%AB%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.1/math.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F8FAFF;
+    --surface: #FFFFFF;
+    --surface2: #F1F5FD;
+    --border: #E2E8F4;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --text-light: #94A3B8;
+
+    --blue: #2563EB;
+    --blue-light: #DBEAFE;
+    --green: #10B981;
+    --green-light: #D1FAE5;
+    --amber: #F59E0B;
+    --amber-light: #FEF3C7;
+    --coral: #EF4444;
+    --coral-light: #FEE2E2;
+    --purple: #8B5CF6;
+    --purple-light: #EDE9FE;
+
+    /* metode colors */
+    --m-left: #2563EB;
+    --m-right: #10B981;
+    --m-mid: #F59E0B;
+    --m-trap: #EF4444;
+    --m-ctrap: #8B5CF6;
+    --m-simp: #EC4899;
+    --m-simp38: #0EA5E9;
+
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.06), 0 10px 30px rgba(0,0,0,0.10);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .logo-text span { color: var(--blue); }
+
+  .header-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    background: var(--blue-light);
+    color: var(--blue);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── LAYOUT ── */
+  .app-layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    height: calc(100vh - 64px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 10px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+
+  /* Function Input */
+  .func-input-wrap {
+    position: relative;
+  }
+  .func-prefix {
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    color: var(--blue);
+    font-weight: 700;
+    pointer-events: none;
+  }
+  .func-input {
+    width: 100%;
+    padding: 12px 14px 12px 40px;
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    color: var(--text);
+    transition: border-color .2s, background .2s;
+    outline: none;
+  }
+  .func-input:focus {
+    border-color: var(--blue);
+    background: var(--surface);
+  }
+  .func-input.error { border-color: var(--coral); }
+
+  .func-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .func-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 3px 9px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all .15s;
+  }
+  .func-chip:hover {
+    background: var(--blue-light);
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  /* Bounds & N */
+  .bounds-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .input-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .num-input {
+    width: 100%;
+    padding: 9px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s;
+  }
+  .num-input:focus { border-color: var(--blue); background: var(--surface); }
+
+  /* Method selector */
+  .method-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .method-btn {
+    padding: 10px 8px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    cursor: pointer;
+    text-align: center;
+    transition: all .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .method-btn .m-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: block;
+  }
+  .method-btn .m-abbr {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-light);
+    display: block;
+    margin-top: 2px;
+  }
+  .method-btn:hover { border-color: #94A3B8; background: var(--surface2); }
+  .method-btn.active { border-width: 2px; }
+
+  .method-btn[data-m="left"].active    { border-color: var(--m-left);  background: var(--blue-light);   }
+  .method-btn[data-m="right"].active   { border-color: var(--m-right); background: var(--green-light);  }
+  .method-btn[data-m="mid"].active     { border-color: var(--m-mid);   background: var(--amber-light);  }
+  .method-btn[data-m="trap"].active    { border-color: var(--m-trap);  background: var(--coral-light);  }
+  .method-btn[data-m="ctrap"].active   { border-color: var(--m-ctrap); background: var(--purple-light); }
+  .method-btn[data-m="simp"].active    { border-color: var(--m-simp);  background: #FCE7F3;             }
+  .method-btn[data-m="simp38"].active  { border-color: var(--m-simp38); background: #E0F2FE;             }
+
+  .method-btn[data-m="left"].active .m-name    { color: var(--m-left);  }
+  .method-btn[data-m="right"].active .m-name   { color: var(--m-right); }
+  .method-btn[data-m="mid"].active .m-name     { color: var(--m-mid);   }
+  .method-btn[data-m="trap"].active .m-name    { color: var(--m-trap);  }
+  .method-btn[data-m="ctrap"].active .m-name   { color: var(--m-ctrap); }
+  .method-btn[data-m="simp"].active .m-name    { color: var(--m-simp);  }
+  .method-btn[data-m="simp38"].active .m-name  { color: var(--m-simp38); }
+
+  /* Compute button */
+  .btn-compute {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: opacity .2s, transform .15s;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+  }
+  .btn-compute:hover { opacity: .92; transform: translateY(-1px); }
+  .btn-compute:active { transform: translateY(0); }
+
+  /* ── MAIN ── */
+  .main-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Tabs */
+  .tabs-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    height: 52px;
+  }
+  .tab-btn {
+    padding: 8px 18px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: var(--text); background: var(--surface2); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+  /* Chart area */
+  .chart-wrap {
+    flex: 1;
+    padding: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Result pills */
+  .result-pills {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .result-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 160px;
+    box-shadow: var(--shadow);
+  }
+  .pill-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .pill-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .pill-value.good { color: var(--green); }
+  .pill-value.warn { color: var(--amber); }
+  .pill-value.bad { color: var(--coral); }
+
+  .canvas-container {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .canvas-container canvas { width: 100% !important; height: 100% !important; }
+
+  /* Table panel */
+  .table-wrap {
+    flex: 1;
+    padding: 24px;
+    overflow: auto;
+  }
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .table-title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .table-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .data-table thead th {
+    background: var(--surface2);
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+  }
+  .data-table tbody tr:hover td { background: var(--surface2); }
+  .data-table tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    transition: background .1s;
+  }
+  .data-table tbody td:first-child {
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  .data-table tfoot td {
+    padding: 12px 14px;
+    background: var(--surface2);
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    border-top: 2px solid var(--border);
+  }
+
+  .badge-idx {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    background: var(--blue-light);
+    color: var(--blue);
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Summary panel */
+  .summary-wrap {
+    flex: 1;
+    padding: 24px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .method-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .method-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .method-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+  }
+  .method-card-title {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .formula-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.8;
+    margin-bottom: 14px;
+    white-space: pre-wrap;
+  }
+  .method-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+  }
+  .method-result-key { font-size: 13px; color: var(--text-muted); }
+  .method-result-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* State: empty */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+    color: var(--text-muted);
+    padding: 40px;
+    text-align: center;
+  }
+  .empty-icon { font-size: 56px; opacity: .4; }
+  .empty-title { font-size: 17px; font-weight: 700; color: var(--text); }
+  .empty-desc { font-size: 13px; line-height: 1.6; max-width: 340px; }
+
+  /* Error hint */
+  .error-hint {
+    font-size: 12px;
+    color: var(--coral);
+    margin-top: 6px;
+    display: none;
+  }
+  .error-hint.show { display: block; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Export buttons */
+  .export-row { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .btn-export {
+    display:flex; align-items:center; gap:6px;
+    padding:7px 14px; border-radius:var(--radius-sm);
+    border:1.5px solid var(--border); background:var(--surface);
+    font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
+    cursor:pointer; color:var(--text-muted); transition:all .15s;
+  }
+  .btn-export:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-light); }
+  .btn-export.green:hover { border-color:var(--green); color:var(--green); background:var(--green-light); }
+
+  /* Comparison highlight */
+  .cell-best { background:var(--green-light) !important; color:var(--green); font-weight:700; }
+  .cell-worst { background:var(--coral-light) !important; color:var(--coral); }
+
+  /* Conclusion */
+  .conclusion-hero {
+    background:linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%);
+    border-radius:var(--radius); padding:24px 28px; color:white; margin-bottom:16px;
+  }
+  .conclusion-hero-label { font-size:11px; font-weight:700; letter-spacing:1.5px; opacity:.75; margin-bottom:6px; }
+  .conclusion-hero-name { font-size:22px; font-weight:800; margin-bottom:4px; }
+  .conclusion-hero-val { font-family:'Space Mono',monospace; font-size:13px; opacity:.85; }
+
+  .rank-row {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 16px; background:var(--surface);
+    border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px;
+  }
+  .rank-badge {
+    width:28px; height:28px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800; flex-shrink:0;
+  }
+  .rank-1 { background:#FEF3C7; color:#D97706; }
+  .rank-2 { background:#F1F5F9; color:#475569; }
+  .rank-3 { background:#FEE2C8; color:#92400E; }
+  .rank-other { background:var(--surface2); color:var(--text-muted); }
+  .rank-name { font-size:13px; font-weight:600; flex:1; }
+  .rank-val { font-family:'Space Mono',monospace; font-size:12px; color:var(--text-muted); }
+  .rank-bar-wrap { width:90px; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .rank-bar { height:100%; border-radius:3px; transition:width .4s; }
+
+  .advice-box {
+    background:var(--surface2); border-left:4px solid var(--blue);
+    border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+    padding:14px 16px; font-size:13px; line-height:1.7;
+    color:var(--text); margin-top:14px;
+  }
+
+  /* Converge */
+  .converge-wrap { flex:1; padding:24px; display:flex; flex-direction:column; gap:14px; overflow:hidden; }
+  .converge-canvas-wrap {
+    flex:1; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); overflow:hidden;
+  }
+
+  .color-bar {
+    height: 3px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+  }
+
+  /* Responsive note */
+  @media (max-width: 900px) {
+    .app-layout { grid-template-columns: 1fr; height: auto; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .main-area { height: 80vh; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 3C7.5 3 8 4 7.5 6L5.5 14C5 16 5.5 17 7 17" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <path d="M4 10H9" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M11 6L13 6" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M11 10L15 10" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M11 14L13 14" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="logo-text">Kelompok <span>Ekstensi</span></span>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+    <span class="header-badge">KOMPUTASI NUMERIK · A11.4610</span>
+    <span style="font-size:11px;color:var(--text-muted);font-family:Space Mono,monospace;">Pasyah Vegananda &amp; Satrio Dimas</span>
+  </div>
+</header>
+
+<div class="app-layout">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- Fungsi -->
+    <div>
+      <div class="section-label">Fungsi f(x)</div>
+      <div class="card" style="padding:14px;">
+        <div class="func-input-wrap">
+          <span class="func-prefix">f=</span>
+          <input class="func-input" id="funcInput" type="text" value="x^2" autocomplete="off" spellcheck="false" placeholder="contoh: sin(x) + x^2">
+        </div>
+        <div class="error-hint" id="funcErr">Fungsi tidak valid. Periksa sintaks.</div>
+        <div class="func-examples">
+          <span class="func-chip" onclick="setFunc('x^2')">x²</span>
+          <span class="func-chip" onclick="setFunc('sin(x)')">sin(x)</span>
+          <span class="func-chip" onclick="setFunc('exp(x)')">eˣ</span>
+          <span class="func-chip" onclick="setFunc('1/(1+x^2)')">1/(1+x²)</span>
+          <span class="func-chip" onclick="setFunc('sqrt(x)')">√x</span>
+          <span class="func-chip" onclick="setFunc('x*sin(x)')">x·sin(x)</span>
+          <span class="func-chip" onclick="setFunc('cos(x)*exp(-x)')">cos·e⁻ˣ</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batas Integrasi -->
+    <div>
+      <div class="section-label">Batas Integrasi</div>
+      <div class="card" style="padding:14px;">
+        <div class="bounds-grid">
+          <div class="input-group">
+            <label class="input-label">Batas Bawah (a)</label>
+            <input class="num-input" id="aInput" type="number" value="0" step="0.1">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Batas Atas (b)</label>
+            <input class="num-input" id="bInput" type="number" value="1" step="0.1">
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <label class="input-label">Jumlah Partisi (n)</label>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
+            <input class="num-input" id="nInput" type="number" value="10" min="2" max="1000" step="1" style="flex:1;">
+            <span style="font-family:'Space Mono'; font-size:12px; color:var(--text-muted); white-space:nowrap;" id="hLabel">h = 0.100</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metode -->
+    <div>
+      <div class="section-label">Pilih Metode</div>
+      <div class="method-grid">
+        <button class="method-btn active" data-m="left" onclick="selectMethod('left')">
+          <span class="m-name">Rectangle Kiri</span>
+          <span class="m-abbr">LEFT RIEMANN</span>
+        </button>
+        <button class="method-btn" data-m="right" onclick="selectMethod('right')">
+          <span class="m-name">Rectangle Kanan</span>
+          <span class="m-abbr">RIGHT RIEMANN</span>
+        </button>
+        <button class="method-btn" data-m="mid" onclick="selectMethod('mid')">
+          <span class="m-name">Titik Tengah</span>
+          <span class="m-abbr">MIDPOINT RULE</span>
+        </button>
+        <button class="method-btn" data-m="trap" onclick="selectMethod('trap')">
+          <span class="m-name">Trapesium</span>
+          <span class="m-abbr">TRAPEZOIDAL</span>
+        </button>
+        <button class="method-btn" data-m="ctrap" onclick="selectMethod('ctrap')">
+          <span class="m-name">Composite Trap.</span>
+          <span class="m-abbr">COMP. TRAP.</span>
+        </button>
+        <button class="method-btn" data-m="simp" onclick="selectMethod('simp')">
+          <span class="m-name">Simpson 1/3</span>
+          <span class="m-abbr">SIMPSON'S RULE</span>
+        </button>
+        <button class="method-btn" data-m="simp38" onclick="selectMethod('simp38')">
+          <span class="m-name">Simpson 3/8</span>
+          <span class="m-abbr">3/8 RULE</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Hitung -->
+    <button class="btn-compute" onclick="compute()">Hitung Integral</button>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main-area">
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab('chart')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:5px"><polyline points="1,11 4,6 7,8 10,3 13,5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>Visualisasi
+      </button>
+      <button class="tab-btn" onclick="switchTab('table')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:5px"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="1" y1="5" x2="13" y2="5" stroke="currentColor" stroke-width="1.2"/><line x1="5" y1="5" x2="5" y2="13" stroke="currentColor" stroke-width="1.2"/></svg>Tabel Perhitungan
+      </button>
+      <button class="tab-btn" onclick="switchTab('summary')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:5px"><rect x="1" y="8" width="2.5" height="5" rx="1" fill="currentColor"/><rect x="5" y="5" width="2.5" height="8" rx="1" fill="currentColor"/><rect x="9" y="2" width="2.5" height="11" rx="1" fill="currentColor"/></svg>Ringkasan & Formula
+      </button>
+      <button class="tab-btn" onclick="switchTab('compare')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:5px"><rect x="1" y="1" width="5" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/><rect x="8" y="1" width="5" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>Perbandingan
+      </button>
+      <button class="tab-btn" onclick="switchTab('converge')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:5px"><path d="M1 12 Q4 9 7 6 Q10 3 13 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>Konvergensi
+      </button>
+      <button class="tab-btn" onclick="switchTab('conclusion')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:5px"><path d="M2 7l3 3 7-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>Kesimpulan
+      </button>
+    </div>
+
+    <!-- TAB: Chart -->
+    <div class="tab-panel active" id="tab-chart">
+      <div class="chart-wrap">
+        <div class="result-pills" id="resultPills">
+          <div class="result-pill">
+            <span class="pill-label">Nilai Aproksimasi</span>
+            <span class="pill-value" id="pillApprox">—</span>
+          </div>
+          <div class="result-pill">
+            <span class="pill-label">Error Relatif</span>
+            <span class="pill-value" id="pillError">—</span>
+          </div>
+          <div class="result-pill">
+            <span class="pill-label">Metode Aktif</span>
+            <span class="pill-value" id="pillMethod" style="font-size:13px;">—</span>
+          </div>
+          <div class="result-pill">
+            <span class="pill-label">n partisi · h step</span>
+            <span class="pill-value" id="pillNH">—</span>
+          </div>
+        </div>
+        <div class="canvas-container">
+          <canvas id="mainChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Table -->
+    <div class="tab-panel" id="tab-table">
+      <div class="table-wrap" id="tableArea">
+        <div class="empty-state">
+          <div class="empty-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="6" y="4" width="36" height="40" rx="4" stroke="#CBD5E1" stroke-width="2.5" fill="none"/><line x1="12" y1="16" x2="36" y2="16" stroke="#CBD5E1" stroke-width="2"/><line x1="12" y1="24" x2="36" y2="24" stroke="#CBD5E1" stroke-width="2"/><line x1="12" y1="32" x2="28" y2="32" stroke="#CBD5E1" stroke-width="2"/></svg></div>
+          <div class="empty-title">Belum ada perhitungan</div>
+          <div class="empty-desc">Isi parameter di sebelah kiri lalu klik "Hitung Integral" untuk melihat tabel perhitungan lengkap.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Summary -->
+    <div class="tab-panel" id="tab-summary">
+      <div class="summary-wrap" id="summaryArea">
+        <div class="empty-state">
+          <div class="empty-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="6" y="28" width="8" height="16" rx="2" fill="#CBD5E1"/><rect x="20" y="18" width="8" height="26" rx="2" fill="#CBD5E1"/><rect x="34" y="8" width="8" height="36" rx="2" fill="#CBD5E1"/></svg></div>
+          <div class="empty-title">Belum ada data</div>
+          <div class="empty-desc">Klik "Hitung Integral" terlebih dahulu untuk melihat ringkasan hasil dan penjelasan formula.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Perbandingan -->
+    <div class="tab-panel" id="tab-compare">
+      <div class="table-wrap" id="compareArea">
+        <div class="empty-state">
+          <div class="empty-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="18" height="40" rx="3" stroke="#CBD5E1" stroke-width="2.5" fill="none"/><rect x="26" y="4" width="18" height="40" rx="3" stroke="#CBD5E1" stroke-width="2.5" fill="none"/></svg></div>
+          <div class="empty-title">Belum ada perbandingan</div>
+          <div class="empty-desc">Klik "Hitung Integral" untuk melihat perbandingan semua metode sekaligus.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Konvergensi -->
+    <div class="tab-panel" id="tab-converge">
+      <div class="chart-wrap" id="convergeArea">
+        <div class="empty-state">
+          <div class="empty-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M4 40 Q14 30 24 18 Q34 6 44 10" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg></div>
+          <div class="empty-title">Belum ada analisis konvergensi</div>
+          <div class="empty-desc">Klik "Hitung Integral" untuk melihat bagaimana error mengecil saat n diperbesar.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Kesimpulan -->
+    <div class="tab-panel" id="tab-conclusion">
+      <div class="summary-wrap" id="conclusionArea">
+        <div class="empty-state">
+          <div class="empty-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M8 24l10 10 22-20" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+          <div class="empty-title">Belum ada kesimpulan</div>
+          <div class="empty-desc">Klik "Hitung Integral" untuk melihat rekomendasi metode terbaik.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let activeMethod = 'left';
+let chartInstance = null;
+let lastResult = null;
+
+const METHOD_META = {
+  left:  { name: 'Rectangle Kiri (Left Riemann)', color: '#2563EB', short: 'LEFT' },
+  right: { name: 'Rectangle Kanan (Right Riemann)', color: '#10B981', short: 'RIGHT' },
+  mid:   { name: 'Titik Tengah (Midpoint Rule)', color: '#F59E0B', short: 'MID' },
+  trap:  { name: 'Aturan Trapesium', color: '#EF4444', short: 'TRAP' },
+  ctrap: { name: 'Composite Trapesium', color: '#8B5CF6', short: 'C-TRAP' },
+  simp:  { name: "Simpson 1/3 Rule", color: '#EC4899', short: 'SIMP-1/3' },
+  simp38:{ name: "Simpson 3/8 Rule", color: '#0EA5E9', short: 'SIMP-3/8' },
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function evalF(expr, x) {
+  return math.evaluate(expr, { x });
+}
+
+function parseInputs() {
+  const expr = document.getElementById('funcInput').value.trim();
+  const a = parseFloat(document.getElementById('aInput').value);
+  const b = parseFloat(document.getElementById('bInput').value);
+  let n = parseInt(document.getElementById('nInput').value);
+  // Simpson 1/3: n harus genap
+  if (activeMethod === 'simp' && n % 2 !== 0) n += 1;
+  // Simpson 3/8: n harus kelipatan 3
+  if (activeMethod === 'simp38') { while (n % 3 !== 0) n += 1; }
+  const h = (b - a) / n;
+  return { expr, a, b, n, h };
+}
+
+function updateHLabel() {
+  const a = parseFloat(document.getElementById('aInput').value);
+  const b = parseFloat(document.getElementById('bInput').value);
+  const n = parseInt(document.getElementById('nInput').value);
+  const h = (b - a) / n;
+  document.getElementById('hLabel').textContent = `h = ${h.toFixed(4)}`;
+}
+
+function fmt(v, d = 8) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  return v.toFixed(d);
+}
+
+function setFunc(f) {
+  document.getElementById('funcInput').value = f;
+}
+
+function selectMethod(m) {
+  activeMethod = m;
+  document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.method-btn[data-m="${m}"]`).classList.add('active');
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick="switchTab('${id}')"]`).classList.add('active');
+  document.getElementById(`tab-${id}`).classList.add('active');
+}
+
+// ─── NUMERICAL METHODS ───────────────────────────────────────────────────────
+function computeExact(expr, a, b) {
+  try {
+    // Numerical estimate with very high n as "exact" reference
+    let s = 0, N = 10000, h = (b - a) / N;
+    for (let i = 0; i < N; i++) {
+      let x0 = a + i * h, x1 = a + (i + 1) * h;
+      s += (evalF(expr, x0) + evalF(expr, x1)) * h / 2;
+    }
+    return s;
+  } catch { return null; }
+}
+
+function methodLeft(expr, a, b, n, h) {
+  const rows = [];
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const xi = a + i * h;
+    const fxi = evalF(expr, xi);
+    const li = fxi * h;
+    total += li;
+    rows.push({ i, xi, fxi, xSample: xi, li });
+  }
+  return { total, rows };
+}
+
+function methodRight(expr, a, b, n, h) {
+  const rows = [];
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const xi = a + (i + 1) * h;
+    const fxi = evalF(expr, xi);
+    const li = fxi * h;
+    total += li;
+    rows.push({ i, xi, fxi, xSample: xi, li });
+  }
+  return { total, rows };
+}
+
+function methodMid(expr, a, b, n, h) {
+  const rows = [];
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const xi = a + (i + 0.5) * h;
+    const fxi = evalF(expr, xi);
+    const li = fxi * h;
+    total += li;
+    rows.push({ i, xi, fxi, xSample: xi, li });
+  }
+  return { total, rows };
+}
+
+function methodTrap(expr, a, b, n, h) {
+  // Single trapezoid (just a→b)
+  const fa = evalF(expr, a);
+  const fb = evalF(expr, b);
+  const total = (fa + fb) * (b - a) / 2;
+  const rows = [{ i: 0, xi: a, xEnd: b, fxi: fa, fxEnd: fb, li: total }];
+  return { total, rows };
+}
+
+function methodCTrap(expr, a, b, n, h) {
+  const rows = [];
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const x0 = a + i * h;
+    const x1 = a + (i + 1) * h;
+    const f0 = evalF(expr, x0);
+    const f1 = evalF(expr, x1);
+    const li = (f0 + f1) * h / 2;
+    total += li;
+    rows.push({ i, xi: x0, xEnd: x1, fxi: f0, fxEnd: f1, li });
+  }
+  return { total, rows };
+}
+
+function methodSimpson(expr, a, b, n, h) {
+  // Composite Simpson 1/3: n must be even
+  if (n % 2 !== 0) n += 1;
+  const rows = [];
+  let total = 0;
+  const pts = [];
+  for (let i = 0; i <= n; i++) pts.push(a + i * h);
+
+  for (let i = 0; i < n; i += 2) {
+    const x0 = pts[i], x1 = pts[i + 1], x2 = pts[i + 2];
+    const f0 = evalF(expr, x0);
+    const f1 = evalF(expr, x1);
+    const f2 = evalF(expr, x2);
+    const li = (h / 3) * (f0 + 4 * f1 + f2);
+    total += li;
+    rows.push({ i: i / 2, xi: x0, xMid: x1, xEnd: x2, f0, f1, f2, li });
+  }
+  return { total, rows };
+}
+
+
+function methodSimpson38(expr, a, b, n, h) {
+  // Composite Simpson 3/8: n harus kelipatan 3
+  while (n % 3 !== 0) n += 1;
+  const rows = [];
+  let total = 0;
+  for (let i = 0; i < n; i += 3) {
+    const x0 = a + i * h;
+    const x1 = a + (i+1) * h;
+    const x2 = a + (i+2) * h;
+    const x3 = a + (i+3) * h;
+    const f0 = evalF(expr, x0);
+    const f1 = evalF(expr, x1);
+    const f2 = evalF(expr, x2);
+    const f3 = evalF(expr, x3);
+    const li = (3*h/8) * (f0 + 3*f1 + 3*f2 + f3);
+    total += li;
+    rows.push({ i: i/3, xi: x0, x1, x2, xEnd: x3, f0, f1, f2, f3, li });
+  }
+  return { total, rows };
+}
+
+function runMethod(expr, a, b, n, h) {
+  switch (activeMethod) {
+    case 'left':  return methodLeft(expr, a, b, n, h);
+    case 'right': return methodRight(expr, a, b, n, h);
+    case 'mid':   return methodMid(expr, a, b, n, h);
+    case 'trap':  return methodTrap(expr, a, b, n, h);
+    case 'ctrap': return methodCTrap(expr, a, b, n, h);
+    case 'simp':  return methodSimpson(expr, a, b, n, h);
+    case 'simp38': return methodSimpson38(expr, a, b, n, h);
+  }
+}
+
+// ─── CHART ───────────────────────────────────────────────────────────────────
+
+// Convert data-space x/y → pixel x/y using Chart.js scales
+function toPixel(chart, xVal, yVal) {
+  return {
+    px: chart.scales.x.getPixelForValue(xVal),
+    py: chart.scales.y.getPixelForValue(yVal),
+  };
+}
+
+// Custom Chart.js plugin: draws partitions AFTER axes are ready
+function makePartitionPlugin(expr, a, b, n, h, result, method, color) {
+  return {
+    id: 'partitionPlugin',
+    afterDraw(chart) {
+      const ctx2 = chart.ctx;
+      const y0px = chart.scales.y.getPixelForValue(0);
+      ctx2.save();
+
+      // Clip to chart area so shapes don't bleed outside axes
+      const { left, top, right, bottom } = chart.chartArea;
+      ctx2.beginPath();
+      ctx2.rect(left, top, right - left, bottom - top);
+      ctx2.clip();
+
+      const fill = hexAlpha(color, 0.22);
+      const stroke = hexAlpha(color, 0.85);
+
+      if (['left', 'right', 'mid'].includes(method)) {
+        // Rectangle partitions
+        result.rows.forEach((row, idx) => {
+          const xL = a + idx * h;
+          const xR = xL + h;
+          const yH = row.fxi;
+
+          const pxL = chart.scales.x.getPixelForValue(xL);
+          const pxR = chart.scales.x.getPixelForValue(xR);
+          const pyH = chart.scales.y.getPixelForValue(yH);
+
+          ctx2.fillStyle = fill;
+          ctx2.strokeStyle = stroke;
+          ctx2.lineWidth = 1.5;
+
+          ctx2.beginPath();
+          ctx2.moveTo(pxL, y0px);
+          ctx2.lineTo(pxL, pyH);
+          ctx2.lineTo(pxR, pyH);
+          ctx2.lineTo(pxR, y0px);
+          ctx2.closePath();
+          ctx2.fill();
+          ctx2.stroke();
+
+          // Dot at exact sample point where f was evaluated
+          const pxSample = chart.scales.x.getPixelForValue(row.xi);
+          ctx2.beginPath();
+          ctx2.arc(pxSample, pyH, 4.5, 0, Math.PI * 2);
+          ctx2.fillStyle = color;
+          ctx2.fill();
+          ctx2.strokeStyle = '#fff';
+          ctx2.lineWidth = 1.5;
+          ctx2.stroke();
+        });
+
+      } else if (method === 'trap') {
+        // Single trapezoid a→b
+        const fa = evalF(expr, a);
+        const fb = evalF(expr, b);
+        const pxa = chart.scales.x.getPixelForValue(a);
+        const pxb = chart.scales.x.getPixelForValue(b);
+        const pya = chart.scales.y.getPixelForValue(fa);
+        const pyb = chart.scales.y.getPixelForValue(fb);
+
+        ctx2.fillStyle = hexAlpha(color, 0.25);
+        ctx2.strokeStyle = stroke;
+        ctx2.lineWidth = 2;
+
+        ctx2.beginPath();
+        ctx2.moveTo(pxa, y0px);
+        ctx2.lineTo(pxa, pya);
+        ctx2.lineTo(pxb, pyb);
+        ctx2.lineTo(pxb, y0px);
+        ctx2.closePath();
+        ctx2.fill();
+        ctx2.stroke();
+
+        // Dots at corners
+        [[pxa, pya], [pxb, pyb]].forEach(([px, py]) => {
+          ctx2.beginPath();
+          ctx2.arc(px, py, 5, 0, Math.PI * 2);
+          ctx2.fillStyle = color;
+          ctx2.fill();
+          ctx2.strokeStyle = '#fff';
+          ctx2.lineWidth = 2;
+          ctx2.stroke();
+        });
+
+      } else if (method === 'ctrap') {
+        // Composite trapezoid — draw each segment separately like the slide image
+        result.rows.forEach((row) => {
+          const pxL = chart.scales.x.getPixelForValue(row.xi);
+          const pxR = chart.scales.x.getPixelForValue(row.xEnd);
+          const pyL = chart.scales.y.getPixelForValue(row.fxi);
+          const pyR = chart.scales.y.getPixelForValue(row.fxEnd);
+
+          // Fill trapezoid shape: bottom-left → top-left → top-right → bottom-right
+          ctx2.fillStyle = fill;
+          ctx2.beginPath();
+          ctx2.moveTo(pxL, y0px);
+          ctx2.lineTo(pxL, pyL);
+          ctx2.lineTo(pxR, pyR);
+          ctx2.lineTo(pxR, y0px);
+          ctx2.closePath();
+          ctx2.fill();
+
+          // Stroke only the slanted top edge + vertical sides (not the bottom)
+          ctx2.strokeStyle = stroke;
+          ctx2.lineWidth = 1.5;
+          ctx2.beginPath();
+          ctx2.moveTo(pxL, y0px);
+          ctx2.lineTo(pxL, pyL);   // left vertical
+          ctx2.lineTo(pxR, pyR);   // slanted top
+          ctx2.lineTo(pxR, y0px);  // right vertical
+          ctx2.stroke();
+        });
+
+        // Draw node dots at each partition boundary
+        for (let i = 0; i <= n; i++) {
+          const xi = a + i * h;
+          const fxi = evalF(expr, xi);
+          const px = chart.scales.x.getPixelForValue(xi);
+          const py = chart.scales.y.getPixelForValue(fxi);
+          ctx2.beginPath();
+          ctx2.arc(px, py, 4.5, 0, Math.PI * 2);
+          ctx2.fillStyle = color;
+          ctx2.fill();
+          ctx2.strokeStyle = '#fff';
+          ctx2.lineWidth = 1.5;
+          ctx2.stroke();
+        }
+
+        // Dashed vertical dividers at each xi (like the slide)
+        ctx2.setLineDash([4, 4]);
+        ctx2.strokeStyle = hexAlpha(color, 0.45);
+        ctx2.lineWidth = 1;
+        for (let i = 0; i <= n; i++) {
+          const xi = a + i * h;
+          const px = chart.scales.x.getPixelForValue(xi);
+          ctx2.beginPath();
+          ctx2.moveTo(px, y0px);
+          ctx2.lineTo(px, chart.scales.y.getPixelForValue(evalF(expr, xi)));
+          ctx2.stroke();
+        }
+        ctx2.setLineDash([]);
+
+        // Label xᵢ below each partition boundary (only if n ≤ 20 to avoid clutter)
+        if (n <= 20) {
+          ctx2.fillStyle = color;
+          ctx2.font = 'bold 10px Space Mono, monospace';
+          ctx2.textAlign = 'center';
+          for (let i = 0; i <= n; i++) {
+            const xi = a + i * h;
+            const px = chart.scales.x.getPixelForValue(xi);
+            ctx2.fillText(`x${i}`, px, y0px + 16);
+          }
+          // Label h between each pair
+          ctx2.fillStyle = hexAlpha(color, 0.7);
+          ctx2.font = 'bold 9px Space Mono, monospace';
+          for (let i = 0; i < n; i++) {
+            const xMid = a + (i + 0.5) * h;
+            const pxMid = chart.scales.x.getPixelForValue(xMid);
+            ctx2.fillText('h', pxMid, y0px + 28);
+          }
+        }
+
+      } else if (method === 'simp38') {
+        // Simpson 3/8: cubic interpolation through 4 points per segment
+        result.rows.forEach((row) => {
+          const steps = 60;
+          const spanStep = (row.xEnd - row.xi) / steps;
+          ctx2.fillStyle = fill;
+          ctx2.strokeStyle = stroke;
+          ctx2.lineWidth = 1.5;
+          ctx2.beginPath();
+          ctx2.moveTo(chart.scales.x.getPixelForValue(row.xi), y0px);
+          for (let s = 0; s <= steps; s++) {
+            const xx = row.xi + s * spanStep;
+            // Lagrange cubic through x0,x1,x2,x3
+            const x0=row.xi,x1=row.x1,x2=row.x2,x3=row.xEnd;
+            const L0=((xx-x1)*(xx-x2)*(xx-x3))/((x0-x1)*(x0-x2)*(x0-x3));
+            const L1=((xx-x0)*(xx-x2)*(xx-x3))/((x1-x0)*(x1-x2)*(x1-x3));
+            const L2=((xx-x0)*(xx-x1)*(xx-x3))/((x2-x0)*(x2-x1)*(x2-x3));
+            const L3=((xx-x0)*(xx-x1)*(xx-x2))/((x3-x0)*(x3-x1)*(x3-x2));
+            const yy=row.f0*L0+row.f1*L1+row.f2*L2+row.f3*L3;
+            ctx2.lineTo(chart.scales.x.getPixelForValue(xx), chart.scales.y.getPixelForValue(yy));
+          }
+          ctx2.lineTo(chart.scales.x.getPixelForValue(row.xEnd), y0px);
+          ctx2.closePath(); ctx2.fill();
+          // Stroke top curve
+          ctx2.beginPath();
+          for (let s = 0; s <= steps; s++) {
+            const xx = row.xi + s * spanStep;
+            const x0=row.xi,x1=row.x1,x2=row.x2,x3=row.xEnd;
+            const L0=((xx-x1)*(xx-x2)*(xx-x3))/((x0-x1)*(x0-x2)*(x0-x3));
+            const L1=((xx-x0)*(xx-x2)*(xx-x3))/((x1-x0)*(x1-x2)*(x1-x3));
+            const L2=((xx-x0)*(xx-x1)*(xx-x3))/((x2-x0)*(x2-x1)*(x2-x3));
+            const L3=((xx-x0)*(xx-x1)*(xx-x2))/((x3-x0)*(x3-x1)*(x3-x2));
+            const yy=row.f0*L0+row.f1*L1+row.f2*L2+row.f3*L3;
+            const ppx=chart.scales.x.getPixelForValue(xx), ppy=chart.scales.y.getPixelForValue(yy);
+            s===0?ctx2.moveTo(ppx,ppy):ctx2.lineTo(ppx,ppy);
+          }
+          ctx2.stroke();
+          // Dividers and dots at 4 nodes
+          ctx2.setLineDash([4,4]); ctx2.strokeStyle=hexAlpha(color,0.4);
+          [row.xi,row.x1,row.x2,row.xEnd].forEach(xv => {
+            const fv=evalF(expr,xv);
+            ctx2.beginPath();
+            ctx2.moveTo(chart.scales.x.getPixelForValue(xv),y0px);
+            ctx2.lineTo(chart.scales.x.getPixelForValue(xv),chart.scales.y.getPixelForValue(fv));
+            ctx2.stroke();
+          }); ctx2.setLineDash([]);
+          [{xv:row.xi,fv:row.f0},{xv:row.x1,fv:row.f1},{xv:row.x2,fv:row.f2},{xv:row.xEnd,fv:row.f3}].forEach(({xv,fv})=>{
+            ctx2.beginPath(); ctx2.arc(chart.scales.x.getPixelForValue(xv),chart.scales.y.getPixelForValue(fv),4.5,0,Math.PI*2);
+            ctx2.fillStyle=color; ctx2.fill(); ctx2.strokeStyle='#fff'; ctx2.lineWidth=1.5; ctx2.stroke();
+          });
+        });
+      } else if (method === 'simp') {
+        // Simpson: parabola fill per 2-segment pair using Lagrange
+        result.rows.forEach((row) => {
+          const steps = 60;
+          const spanStep = (row.xEnd - row.xi) / steps;
+
+          ctx2.fillStyle = fill;
+          ctx2.strokeStyle = stroke;
+          ctx2.lineWidth = 1.5;
+
+          // Fill path: go along parabola then back along baseline
+          ctx2.beginPath();
+          ctx2.moveTo(chart.scales.x.getPixelForValue(row.xi), y0px);
+
+          for (let s = 0; s <= steps; s++) {
+            const xx = row.xi + s * spanStep;
+            const L0 = ((xx-row.xMid)*(xx-row.xEnd))/((row.xi-row.xMid)*(row.xi-row.xEnd));
+            const L1 = ((xx-row.xi)*(xx-row.xEnd))/((row.xMid-row.xi)*(row.xMid-row.xEnd));
+            const L2 = ((xx-row.xi)*(xx-row.xMid))/((row.xEnd-row.xi)*(row.xEnd-row.xMid));
+            const yy = row.f0*L0 + row.f1*L1 + row.f2*L2;
+            ctx2.lineTo(chart.scales.x.getPixelForValue(xx), chart.scales.y.getPixelForValue(yy));
+          }
+          ctx2.lineTo(chart.scales.x.getPixelForValue(row.xEnd), y0px);
+          ctx2.closePath();
+          ctx2.fill();
+
+          // Stroke just the parabola top
+          ctx2.beginPath();
+          for (let s = 0; s <= steps; s++) {
+            const xx = row.xi + s * spanStep;
+            const L0 = ((xx-row.xMid)*(xx-row.xEnd))/((row.xi-row.xMid)*(row.xi-row.xEnd));
+            const L1 = ((xx-row.xi)*(xx-row.xEnd))/((row.xMid-row.xi)*(row.xMid-row.xEnd));
+            const L2 = ((xx-row.xi)*(xx-row.xMid))/((row.xEnd-row.xi)*(row.xEnd-row.xMid));
+            const yy = row.f0*L0 + row.f1*L1 + row.f2*L2;
+            const ppx = chart.scales.x.getPixelForValue(xx);
+            const ppy = chart.scales.y.getPixelForValue(yy);
+            s === 0 ? ctx2.moveTo(ppx, ppy) : ctx2.lineTo(ppx, ppy);
+          }
+          ctx2.stroke();
+
+          // Vertical dividers
+          ctx2.setLineDash([4, 4]);
+          ctx2.strokeStyle = hexAlpha(color, 0.4);
+          [row.xi, row.xMid, row.xEnd].forEach(xv => {
+            const fv = evalF(expr, xv);
+            ctx2.beginPath();
+            ctx2.moveTo(chart.scales.x.getPixelForValue(xv), y0px);
+            ctx2.lineTo(chart.scales.x.getPixelForValue(xv), chart.scales.y.getPixelForValue(fv));
+            ctx2.stroke();
+          });
+          ctx2.setLineDash([]);
+
+          // Dots
+          [{ xv: row.xi, fv: row.f0 }, { xv: row.xMid, fv: row.f1 }, { xv: row.xEnd, fv: row.f2 }].forEach(({ xv, fv }) => {
+            ctx2.beginPath();
+            ctx2.arc(chart.scales.x.getPixelForValue(xv), chart.scales.y.getPixelForValue(fv), 4.5, 0, Math.PI * 2);
+            ctx2.fillStyle = color;
+            ctx2.fill();
+            ctx2.strokeStyle = '#fff';
+            ctx2.lineWidth = 1.5;
+            ctx2.stroke();
+          });
+        });
+      }
+
+      ctx2.restore();
+    }
+  };
+}
+
+function buildChart(expr, a, b, n, h, result) {
+  const meta = METHOD_META[activeMethod];
+  const canvas = document.getElementById('mainChart');
+  const ctx = canvas.getContext('2d');
+
+  // Curve points
+  const curveN = 400;
+  const dx = (b - a) / curveN;
+  const curveX = [], curveY = [];
+  for (let i = 0; i <= curveN; i++) {
+    const x = a + i * dx;
+    curveX.push(x);
+    try { curveY.push(evalF(expr, x)); } catch { curveY.push(null); }
+  }
+
+  // Compute y range for nice axis padding
+  const validY = curveY.filter(v => v !== null && isFinite(v));
+  const yMin = Math.min(...validY);
+  const yMax = Math.max(...validY);
+  const yPad = (yMax - yMin) * 0.12 || 0.5;
+
+  // Only one dataset: the curve itself (no fill datasets — plugin handles drawing)
+  const curveDataset = {
+    label: `f(x) = ${expr}`,
+    data: curveX.map((x, i) => ({ x, y: curveY[i] })),
+    borderColor: '#1E293B',
+    borderWidth: 2.5,
+    pointRadius: 0,
+    fill: false,
+    tension: 0.3,
+    spanGaps: true,
+  };
+
+  const plugin = makePartitionPlugin(expr, a, b, n, h, result, activeMethod, meta.color);
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { datasets: [curveDataset] },
+    plugins: [plugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 350, easing: 'easeOutQuart' },
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `f(${fmt(ctx.parsed.x, 4)}) = ${fmt(ctx.parsed.y, 6)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'x', font: { family: 'Space Mono', size: 12 } },
+          grid: { color: '#E2E8F4' },
+          ticks: { font: { family: 'Space Mono', size: 10 } }
+        },
+        y: {
+          min: Math.min(0, yMin - yPad),
+          max: yMax + yPad,
+          title: { display: true, text: 'f(x)', font: { family: 'Space Mono', size: 12 } },
+          grid: { color: '#E2E8F4' },
+          ticks: { font: { family: 'Space Mono', size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+function hexAlpha(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ─── TABLE ───────────────────────────────────────────────────────────────────
+function buildTable(result, h, exact) {
+  const meta = METHOD_META[activeMethod];
+  const area = document.getElementById('tableArea');
+  const isSimpson = activeMethod === 'simp';
+  const isSimpson38 = activeMethod === 'simp38';
+  const isTrapGroup = ['trap', 'ctrap'].includes(activeMethod);
+
+  let thead = '';
+  if (isSimpson38) {
+    thead = `<tr><th>Segmen</th><th>x₀</th><th>x₁</th><th>x₂</th><th>x₃</th><th>f(x₀)</th><th>f(x₁)</th><th>f(x₂)</th><th>f(x₃)</th><th>Luas Lᵢ</th></tr>`;
+  } else if (isSimpson) {
+    thead = `<tr>
+      <th>Segmen</th>
+      <th>x₀</th><th>x₁ (mid)</th><th>x₂</th>
+      <th>f(x₀)</th><th>f(x₁)</th><th>f(x₂)</th>
+      <th>Luas Lᵢ</th>
+    </tr>`;
+  } else if (isTrapGroup) {
+    thead = `<tr>
+      <th>i</th><th>xᵢ</th><th>xᵢ₊₁</th>
+      <th>f(xᵢ)</th><th>f(xᵢ₊₁)</th>
+      <th>Lᵢ = h/2·(fᵢ+fᵢ₊₁)</th>
+    </tr>`;
+  } else {
+    thead = `<tr>
+      <th>i</th><th>xᵢ</th><th>f(xᵢ)</th>
+      <th>Lᵢ = h·f(xᵢ)</th>
+    </tr>`;
+  }
+
+  const maxRows = Math.min(result.rows.length, 200);
+  let tbody = '';
+  for (let r = 0; r < maxRows; r++) {
+    const row = result.rows[r];
+    if (isSimpson38) {
+      const row = result.rows[r];
+      tbody += `<tr><td><span class="badge-idx">${row.i}</span></td><td>${fmt(row.xi,5)}</td><td>${fmt(row.x1,5)}</td><td>${fmt(row.x2,5)}</td><td>${fmt(row.xEnd,5)}</td><td>${fmt(row.f0,6)}</td><td>${fmt(row.f1,6)}</td><td>${fmt(row.f2,6)}</td><td>${fmt(row.f3,6)}</td><td><b>${fmt(row.li,8)}</b></td></tr>`;
+    } else if (isSimpson) {
+      tbody += `<tr>
+        <td><span class="badge-idx">${row.i}</span></td>
+        <td>${fmt(row.xi, 5)}</td>
+        <td>${fmt(row.xMid, 5)}</td>
+        <td>${fmt(row.xEnd, 5)}</td>
+        <td>${fmt(row.f0, 6)}</td>
+        <td>${fmt(row.f1, 6)}</td>
+        <td>${fmt(row.f2, 6)}</td>
+        <td><b>${fmt(row.li, 8)}</b></td>
+      </tr>`;
+    } else if (isTrapGroup) {
+      tbody += `<tr>
+        <td><span class="badge-idx">${row.i}</span></td>
+        <td>${fmt(row.xi, 5)}</td>
+        <td>${fmt(row.xEnd, 5)}</td>
+        <td>${fmt(row.fxi, 6)}</td>
+        <td>${fmt(row.fxEnd, 6)}</td>
+        <td><b>${fmt(row.li, 8)}</b></td>
+      </tr>`;
+    } else {
+      tbody += `<tr>
+        <td><span class="badge-idx">${row.i}</span></td>
+        <td>${fmt(row.xi, 5)}</td>
+        <td>${fmt(row.fxi, 6)}</td>
+        <td><b>${fmt(row.li, 8)}</b></td>
+      </tr>`;
+    }
+  }
+
+  const truncNote = result.rows.length > 200
+    ? `<p style="color:var(--text-muted);font-size:12px;margin-top:8px;">* Menampilkan 200 dari ${result.rows.length} baris. Kurangi n untuk melihat semua.</p>` : '';
+
+  const errPct = exact !== null ? Math.abs((result.total - exact) / exact * 100) : null;
+  const errStr = errPct !== null ? `${errPct.toFixed(6)}%` : '(ref. tidak tersedia)';
+
+  area.innerHTML = `
+    <div class="export-row">
+      <button class="btn-export" onclick="exportTableCSV()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10h9M6.5 2v6M4 6l2.5 2.5L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Export CSV
+      </button>
+    </div>
+    <div class="table-header">
+      <div>
+        <div class="table-title" style="color:${meta.color}">${meta.name}</div>
+        <div class="table-meta">Total baris: ${result.rows.length} partisi</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="table-meta">∫ f(x)dx ≈ <b style="color:${meta.color}">${fmt(result.total)}</b></div>
+        <div class="table-meta">Error relatif: ${errStr}</div>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead>${thead}</thead>
+      <tbody>${tbody}</tbody>
+      <tfoot><tr>
+        <td colspan="100%" style="text-align:right;">
+          Σ Lᵢ = <span style="color:${meta.color}">${fmt(result.total)}</span>
+          &nbsp;|&nbsp;
+          Ref (n=10000): ${exact !== null ? fmt(exact) : '—'}
+          &nbsp;|&nbsp;
+          Error: ${errStr}
+        </td>
+      </tr></tfoot>
+    </table>
+    ${truncNote}
+  `;
+}
+
+// ─── SUMMARY ─────────────────────────────────────────────────────────────────
+const FORMULAS = {
+  left:  `L = h · Σ f(xᵢ)  (i = 0 → n-1)
+xᵢ = a + i·h
+h = (b - a) / n`,
+  right: `L = h · Σ f(xᵢ)  (i = 1 → n)
+xᵢ = a + i·h
+h = (b - a) / n`,
+  mid:   `L = h · Σ f(xᵢ + h/2)  (i = 0 → n-1)
+xᵢ_mid = a + (i + 0.5)·h
+h = (b - a) / n`,
+  trap:  `L = (b - a)/2 · [f(a) + f(b)]
+(Satu trapesium dari a ke b)`,
+  ctrap: `L = h/2 · [f(x₀) + 2f(x₁) + 2f(x₂) + ... + 2f(xₙ₋₁) + f(xₙ)]
+xᵢ = a + i·h
+h = (b - a) / n`,
+  simp:  `L = h/3 · Σ [f(x₂ᵢ) + 4·f(x₂ᵢ₊₁) + f(x₂ᵢ₊₂)]  (i = 0,2,4,...)
+Syarat: n genap
+h = (b - a) / n`,
+  simp38:`L = 3h/8 · Σ [f(x₃ᵢ) + 3·f(x₃ᵢ₊₁) + 3·f(x₃ᵢ₊₂) + f(x₃ᵢ₊₃)]  (i = 0,3,6,...)
+Syarat: n kelipatan 3
+h = (b - a) / n`,
+};
+
+const DESCRIPTIONS = {
+  left:  'Menggunakan nilai f di ujung KIRI tiap partisi sebagai tinggi persegi panjang. Cenderung under/over-estimate bergantung monotonisitas fungsi.',
+  right: 'Menggunakan nilai f di ujung KANAN tiap partisi. Merupakan cermin dari Left Riemann dengan karakteristik error berlawanan arah.',
+  mid:   'Menggunakan nilai f di TITIK TENGAH tiap partisi. Umumnya lebih akurat dari Left/Right dengan jumlah partisi sama.',
+  trap:  'Satu trapesium tunggal menghubungkan f(a) dan f(b). Sangat sederhana namun akurasi rendah untuk fungsi non-linear.',
+  ctrap: 'Membagi [a,b] menjadi n trapesium kecil dan menjumlahkan luasnya. Lebih akurat dari trapesium tunggal, error orde O(h²).',
+  simp:  "Menggunakan polinom kuadrat (parabola) melewati 3 titik per segmen. Akurasi tinggi, error orde O(h⁴). Butuh n genap.",
+  simp38:"Menggunakan polinom kubik melewati 4 titik per segmen. Akurasi sangat tinggi, error orde O(h⁴). Butuh n kelipatan 3. Lebih akurat dari Simpson 1/3 untuk fungsi polinomial orde 3.",
+};
+
+function buildSummary(result, exact, expr, a, b, n, h) {
+  const meta = METHOD_META[activeMethod];
+  const errAbs = exact !== null ? Math.abs(result.total - exact) : null;
+  const errRel = exact !== null ? Math.abs((result.total - exact) / exact * 100) : null;
+  const errClass = errRel !== null ? (errRel < 0.01 ? 'good' : errRel < 1 ? 'warn' : 'bad') : '';
+
+  const area = document.getElementById('summaryArea');
+  area.innerHTML = `
+    <div class="method-card">
+      <div class="color-bar" style="background:${meta.color}"></div>
+      <div class="method-card-header">
+        <div class="method-dot" style="background:${meta.color}"></div>
+        <span class="method-card-title">${meta.name}</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">${DESCRIPTIONS[activeMethod]}</p>
+      <div class="formula-box">${FORMULAS[activeMethod]}</div>
+      <div class="method-result-row">
+        <span class="method-result-key">Fungsi f(x)</span>
+        <span class="method-result-val" style="color:var(--blue)">f(x) = ${expr}</span>
+      </div>
+      <div class="method-result-row">
+        <span class="method-result-key">Batas Integrasi</span>
+        <span class="method-result-val">[${a}, ${b}]</span>
+      </div>
+      <div class="method-result-row">
+        <span class="method-result-key">Jumlah Partisi (n)</span>
+        <span class="method-result-val">${n}</span>
+      </div>
+      <div class="method-result-row">
+        <span class="method-result-key">Lebar Langkah (h)</span>
+        <span class="method-result-val">${fmt(h, 6)}</span>
+      </div>
+      <div class="method-result-row">
+        <span class="method-result-key">∫ Aproksimasi</span>
+        <span class="method-result-val" style="color:${meta.color};font-size:17px">${fmt(result.total)}</span>
+      </div>
+      <div class="method-result-row">
+        <span class="method-result-key">Nilai Referensi (n=10000)</span>
+        <span class="method-result-val">${exact !== null ? fmt(exact) : '—'}</span>
+      </div>
+      <div class="method-result-row">
+        <span class="method-result-key">Error Absolut</span>
+        <span class="method-result-val ${errClass}">${errAbs !== null ? fmt(errAbs) : '—'}</span>
+      </div>
+      <div class="method-result-row">
+        <span class="method-result-key">Error Relatif (%)</span>
+        <span class="method-result-val ${errClass}">${errRel !== null ? errRel.toFixed(6) + ' %' : '—'}</span>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-card-header">
+        <span class="method-card-title">Catatan Interpretasi Error</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        <div style="background:var(--green-light);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:4px">SANGAT AKURAT</div>
+          <div style="font-family:'Space Mono';font-size:13px;color:var(--green)">Error &lt; 0.01%</div>
+        </div>
+        <div style="background:var(--amber-light);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--amber);font-weight:700;margin-bottom:4px">CUKUP AKURAT</div>
+          <div style="font-family:'Space Mono';font-size:13px;color:var(--amber)">0.01% – 1%</div>
+        </div>
+        <div style="background:var(--coral-light);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--coral);font-weight:700;margin-bottom:4px">KURANG AKURAT</div>
+          <div style="font-family:'Space Mono';font-size:13px;color:var(--coral)">Error &gt; 1%</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── PILLS ───────────────────────────────────────────────────────────────────
+function updatePills(result, exact, n, h) {
+  const meta = METHOD_META[activeMethod];
+  const errRel = exact !== null ? Math.abs((result.total - exact) / exact * 100) : null;
+  const errClass = errRel !== null ? (errRel < 0.01 ? 'good' : errRel < 1 ? 'warn' : 'bad') : '';
+
+  document.getElementById('pillApprox').textContent = fmt(result.total, 8);
+  document.getElementById('pillApprox').style.color = meta.color;
+  document.getElementById('pillError').textContent = errRel !== null ? errRel.toFixed(6) + ' %' : '—';
+  document.getElementById('pillError').className = `pill-value ${errClass}`;
+  document.getElementById('pillMethod').textContent = meta.short;
+  document.getElementById('pillMethod').style.color = meta.color;
+  document.getElementById('pillNH').textContent = `n=${n}  h=${fmt(h, 4)}`;
+}
+
+// ─── MAIN COMPUTE ─────────────────────────────────────────────────────────────
+function compute() {
+  const errEl = document.getElementById('funcErr');
+  const funcEl = document.getElementById('funcInput');
+
+  const { expr, a, b, n, h } = parseInputs();
+
+  // Validate
+  try {
+    evalF(expr, (a + b) / 2);
+    funcEl.classList.remove('error');
+    errEl.classList.remove('show');
+  } catch (e) {
+    funcEl.classList.add('error');
+    errEl.classList.add('show');
+    return;
+  }
+
+  if (a >= b) {
+    alert('Batas bawah (a) harus lebih kecil dari batas atas (b)!');
+    return;
+  }
+
+  // Sinkron n (mungkin dibump untuk Simpson) ke sidebar
+  document.getElementById('nInput').value = n;
+  document.getElementById('hLabel').textContent = `h = ${h.toFixed(4)}`;
+
+  // Run
+  const result = runMethod(expr, a, b, n, h);
+  const exact = computeExact(expr, a, b);
+
+  lastResult = { result, exact, expr, a, b, n, h };
+
+  // Update UI
+  updatePills(result, exact, n, h);
+  buildChart(expr, a, b, n, h, result);
+  buildTable(result, h, exact);
+  buildSummary(result, exact, expr, a, b, n, h);
+  buildCompare(expr, a, b, n, h, exact);
+  buildConverge(expr, a, b, exact);
+  buildConclusion(expr, a, b, n, h, exact);
+}
+
+
+// ─── COMPARE ALL METHODS ─────────────────────────────────────────────────────
+function runAllMethods(expr, a, b, n, h, exact) {
+  const methods = ['left','right','mid','trap','ctrap','simp','simp38'];
+  const savedMethod = activeMethod;
+  const results = methods.map(m => {
+    activeMethod = m;
+    let nM = n, hM = h;
+    if (m === 'simp' && n % 2 !== 0) { nM = n + 1; hM = (b - a) / nM; }
+    if (m === 'simp38') { nM = n; while(nM % 3 !== 0) nM++; hM = (b - a) / nM; }
+    const res = runMethod(expr, a, b, nM, hM);
+    const errAbs = exact !== null ? Math.abs(res.total - exact) : null;
+    const errRel = exact !== null && exact !== 0 ? Math.abs((res.total - exact) / exact * 100) : null;
+    return { m, name: METHOD_META[m].name, color: METHOD_META[m].color, total: res.total, errAbs, errRel };
+  });
+  activeMethod = savedMethod;
+  return results;
+}
+
+function buildCompare(expr, a, b, n, h, exact) {
+  const area = document.getElementById('compareArea');
+  const allRes = runAllMethods(expr, a, b, n, h, exact);
+  const sorted = [...allRes].sort((x,y) => (x.errRel??Infinity) - (y.errRel??Infinity));
+  const bestM = sorted[0].m, worstM = sorted[sorted.length-1].m;
+
+  let rows = allRes.map(r => {
+    const isBest = r.m === bestM, isWorst = r.m === worstM;
+    const cls = isBest ? 'cell-best' : isWorst ? 'cell-worst' : '';
+    return '<tr><td><span style="display:inline-flex;align-items:center;gap:7px;">'
+      + '<span style="width:10px;height:10px;border-radius:50%;background:'+r.color+';display:inline-block;flex-shrink:0;"></span>'
+      + r.name + '</span></td>'
+      + '<td class="'+cls+'" style="font-family:Space Mono,monospace;font-size:12px">'+fmt(r.total)+'</td>'
+      + '<td class="'+cls+'" style="font-family:Space Mono,monospace;font-size:12px">'+(r.errAbs!==null?fmt(r.errAbs):'—')+'</td>'
+      + '<td class="'+cls+'" style="font-family:Space Mono,monospace;font-size:12px">'+(r.errRel!==null?r.errRel.toFixed(6)+' %':'—')+(isBest?' ★':'')+'</td></tr>';
+  }).join('');
+
+  area.innerHTML = '<div class="export-row">'
+    + '<button class="btn-export" onclick="exportCompareCSV()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10h9M6.5 2v6M4 6l2.5 2.5L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Export CSV</button>'
+    + '<button class="btn-export green" onclick="exportComparePDF()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="2" y="1" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="4" y1="5" x2="9" y2="5" stroke="currentColor" stroke-width="1.2"/><line x1="4" y1="7.5" x2="9" y2="7.5" stroke="currentColor" stroke-width="1.2"/></svg>Export PDF</button>'
+    + '</div>'
+    + '<div class="table-header"><div><div class="table-title">Perbandingan Semua Metode</div>'
+    + '<div class="table-meta">f(x) = '+expr+' &nbsp;|&nbsp; ['+a+', '+b+'] &nbsp;|&nbsp; n = '+n+'</div></div>'
+    + '<div style="text-align:right;"><div class="table-meta">Referensi (n=10000): <b style="font-family:Space Mono,monospace">'+(exact!==null?fmt(exact):'—')+'</b></div></div></div>'
+    + '<table class="data-table"><thead><tr><th>Metode</th><th>Nilai Aproksimasi</th><th>Error Absolut</th><th>Error Relatif (%)</th></tr></thead>'
+    + '<tbody>'+rows+'</tbody></table>'
+    + '<p style="font-size:11px;color:var(--text-muted);margin-top:8px;">★ = metode terbaik &nbsp;·&nbsp; sel merah = error terbesar</p>';
+}
+
+// ─── CONVERGENCE ─────────────────────────────────────────────────────────────
+let convergeChart = null;
+
+function buildConverge(expr, a, b, exact) {
+  const area = document.getElementById('convergeArea');
+  area.innerHTML = '<div class="converge-wrap">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+    + '<div><div style="font-size:15px;font-weight:700;">Analisis Konvergensi Error</div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">Error relatif (%) vs jumlah partisi n — skala logaritmik</div></div>'
+    + '<button class="btn-export" onclick="exportConvergeCSV()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10h9M6.5 2v6M4 6l2.5 2.5L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Export CSV</button>'
+    + '</div>'
+    + '<div class="converge-canvas-wrap"><canvas id="convergeChart"></canvas></div></div>';
+
+  const nVals = [2,4,6,8,10,16,20,32,50,64,100,128,256,512];
+  const methods = ['left','right','mid','ctrap','simp','simp38'];
+  const savedMethod = activeMethod;
+
+  const datasets = methods.map(m => {
+    const meta = METHOD_META[m];
+    const data = nVals.map(nv => {
+      activeMethod = m;
+      let nM = nv, hM = (b-a)/nv;
+      if (m==='simp' && nv%2!==0){nM=nv+1;hM=(b-a)/nM;}
+      const res = runMethod(expr,a,b,nM,hM);
+      const err = exact!==null && exact!==0 ? Math.abs((res.total-exact)/exact*100) : null;
+      return { x: nv, y: err };
+    }).filter(d => d.y !== null && d.y > 0);
+    return { label: meta.short, data, borderColor: meta.color,
+      backgroundColor: hexAlpha(meta.color,0.1), borderWidth:2,
+      pointRadius:4, pointBackgroundColor:meta.color, tension:0.2, fill:false };
+  });
+  activeMethod = savedMethod;
+
+  const ctx = document.getElementById('convergeChart').getContext('2d');
+  if (convergeChart) convergeChart.destroy();
+  convergeChart = new Chart(ctx, {
+    type: 'line', data: { datasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales: {
+        x: { type:'logarithmic', title:{display:true,text:'Jumlah Partisi (n)',font:{family:'Space Mono',size:11}},
+          grid:{color:'#E2E8F4'}, ticks:{font:{family:'Space Mono',size:10}, callback: v => [2,4,8,16,32,64,128,256,512].includes(v)?v:''} },
+        y: { type:'logarithmic', title:{display:true,text:'Error Relatif (%)',font:{family:'Space Mono',size:11}},
+          grid:{color:'#E2E8F4'}, ticks:{font:{family:'Space Mono',size:10}, callback: v => v+'%'} }
+      },
+      plugins: {
+        legend: { display:true, position:'top', labels:{font:{family:'Space Mono',size:10},boxWidth:12} },
+        tooltip: { callbacks:{ label: ctx => ctx.dataset.label+': '+(ctx.parsed.y?ctx.parsed.y.toFixed(4)+'%':'—') } }
+      }
+    }
+  });
+}
+
+// ─── CONCLUSION ───────────────────────────────────────────────────────────────
+function buildConclusion(expr, a, b, n, h, exact) {
+  const area = document.getElementById('conclusionArea');
+  const allRes = runAllMethods(expr, a, b, n, h, exact);
+  const sorted = [...allRes].sort((x,y) => (x.errRel??Infinity)-(y.errRel??Infinity));
+  const best = sorted[0];
+  const maxErr = sorted[sorted.length-1].errRel || 1;
+
+  const rankClass = ['rank-1','rank-2','rank-3','rank-other','rank-other','rank-other'];
+  const rankRows = sorted.map((r,i) => {
+    const barW = maxErr>0 ? Math.max(4,(r.errRel/maxErr)*100) : 4;
+    return '<div class="rank-row">'
+      + '<span class="rank-badge '+rankClass[i]+'">'+(i+1)+'</span>'
+      + '<span class="rank-name" style="color:'+r.color+'">'+r.name+'</span>'
+      + '<div class="rank-bar-wrap"><div class="rank-bar" style="width:'+barW+'%;background:'+r.color+'"></div></div>'
+      + '<span class="rank-val">'+(r.errRel!==null?r.errRel.toFixed(6)+' %':'—')+'</span></div>';
+  }).join('');
+
+  const adviceMap = {
+    simp:  'Simpson 1/3 Rule adalah pilihan terbaik untuk fungsi yang mulus (smooth). Metode ini menggunakan aproksimasi parabola sehingga error-nya turun sangat cepat seiring bertambahnya n (orde O(h⁴)). Sangat direkomendasikan untuk integrasi numerik presisi tinggi.',
+    ctrap: 'Composite Trapesium memberikan akurasi yang baik untuk kasus ini. Metode ini sederhana namun cukup andal dengan error orde O(h²). Cocok digunakan ketika kesederhanaan implementasi menjadi prioritas.',
+    mid:   'Titik Tengah (Midpoint Rule) tampil terbaik untuk kasus ini, dengan error orde O(h²) namun konstanta yang lebih kecil dari Trapesium. Pilihan solid untuk fungsi yang bervariasi dalam interval.',
+    left:  'Rectangle Kiri unggul untuk kasus ini, meskipun secara umum metode ini memiliki error orde O(h) yang lebih besar. Hasilnya sangat bergantung pada monotonisitas fungsi.',
+    right: 'Rectangle Kanan memberikan hasil terbaik di sini. Seperti Rectangle Kiri, error-nya orde O(h) sehingga butuh n besar untuk akurasi tinggi pada fungsi umum.',
+    trap:  'Trapesium Tunggal adalah metode paling sederhana dan hanya menggunakan dua titik evaluasi. Cocok untuk fungsi yang mendekati linear dalam interval [a,b].',
+    simp38:'Simpson 3/8 Rule unggul di sini! Metode ini menggunakan polinom kubik (4 titik per segmen) dengan bobot 1-3-3-1, menghasilkan aproksimasi yang sangat akurat dengan error orde O(h⁴). Sangat ideal untuk fungsi polinomial orde 3 atau fungsi yang memiliki variasi kubik.',
+  };
+
+  area.innerHTML = '<div class="conclusion-hero">'
+    + '<div class="conclusion-hero-label">METODE TERBAIK UNTUK KASUS INI</div>'
+    + '<div class="conclusion-hero-name">'+best.name+'</div>'
+    + '<div class="conclusion-hero-val">Error Relatif: '+(best.errRel!==null?best.errRel.toFixed(6)+' %':'—')+' &nbsp;·&nbsp; Aproksimasi: '+fmt(best.total)+'</div></div>'
+    + '<div class="method-card"><div class="method-card-header"><span class="method-card-title">Peringkat Semua Metode</span>'
+    + '<span style="font-size:11px;color:var(--text-muted);">f(x)='+expr+', ['+a+','+b+'], n='+n+'</span></div>'
+    + rankRows + '</div>'
+    + '<div class="method-card"><div class="method-card-header"><span class="method-card-title">Analisis & Rekomendasi</span></div>'
+    + '<div class="advice-box">'+adviceMap[best.m]+'</div>'
+    + '<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:12px;">'
+    + '<div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:4px;">ERROR TERKECIL</div>'
+    + '<div style="font-family:Space Mono,monospace;font-size:13px;color:'+best.color+';font-weight:700;">'+(best.errRel!==null?best.errRel.toFixed(6)+'%':'—')+'</div>'
+    + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">'+best.name+'</div></div>'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:12px;">'
+    + '<div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:4px;">NILAI REFERENSI</div>'
+    + '<div style="font-family:Space Mono,monospace;font-size:13px;color:var(--text);font-weight:700;">'+(exact!==null?fmt(exact):'—')+'</div>'
+    + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Composite Trap. n=10000</div></div></div></div>';
+}
+
+// ─── EXPORT CSV ───────────────────────────────────────────────────────────────
+function exportCompareCSV() {
+  if (!lastResult) return;
+  const { expr,a,b,n,h,exact } = lastResult;
+  const allRes = runAllMethods(expr,a,b,n,h,exact);
+  const sorted = [...allRes].sort((x,y)=>(x.errRel??Infinity)-(y.errRel??Infinity));
+  const formulaMap = {
+    left:  'L = h*sum(f(a+i*h)), i=0..n-1',
+    right: 'L = h*sum(f(a+(i+1)*h)), i=0..n-1',
+    mid:   'L = h*sum(f(a+(i+0.5)*h)), i=0..n-1',
+    trap:  'L = (b-a)/2*(f(a)+f(b))',
+    ctrap: 'L = h/2*(f(x0)+2f(x1)+...+2f(xn-1)+f(xn))',
+    simp:  'L = h/3*sum(f(x2i)+4f(x2i+1)+f(x2i+2))',
+    simp38:'L = 3h/8*sum(f(x3i)+3f(x3i+1)+3f(x3i+2)+f(x3i+3))',
+  };
+  let csv = '=== KELOMPOK EKSTENSI - PERBANDINGAN METODE INTEGRASI NUMERIK ===\n\n';
+  csv += 'PARAMETER\n';
+  csv += 'Fungsi f(x),='+expr+'\n';
+  csv += 'Batas Bawah (a),'+a+'\n';
+  csv += 'Batas Atas (b),'+b+'\n';
+  csv += 'Jumlah Partisi (n),'+n+'\n';
+  csv += 'Lebar Langkah (h),'+fmt((b-a)/n,10)+'\n';
+  csv += 'Nilai Referensi (n=10000),'+(exact!==null?fmt(exact,10):'-')+'\n\n';
+  csv += 'HASIL PERBANDINGAN\n';
+  csv += 'Peringkat,Metode,Formula,Nilai Aproksimasi,Error Absolut,Error Relatif (%),Status\n';
+  sorted.forEach((r,i) => {
+    const status = i===0?'TERBAIK':i===sorted.length-1?'TERBURUK':'';
+    csv += (i+1)+',"'+r.name+'","'+formulaMap[r.m]+'",'+fmt(r.total,10)+','
+      +(r.errAbs!==null?fmt(r.errAbs,10):'-')+','
+      +(r.errRel!==null?r.errRel.toFixed(6)+'%':'-')
+      +','+status+'\n';
+  });
+  csv += '\nKESIMPULAN\n';
+  csv += 'Metode Terbaik,"'+sorted[0].name+'"\n';
+  csv += 'Error Terkecil,'+(sorted[0].errRel!==null?sorted[0].errRel.toFixed(6)+'%':'-')+'\n';
+  csv += '\nDibuat oleh Kelompok Ekstensi - Komputasi Numerik A11.4610\n';
+  downloadFile(csv, 'Perbandingan_Ekstensi.csv', 'text/csv');
+}
+
+function exportConvergeCSV() {
+  if (!lastResult) return;
+  const { expr,a,b,exact } = lastResult;
+  const nVals = [2,4,8,16,32,64,128,256,512];
+  const methods = ['left','right','mid','ctrap','simp','simp38'];
+  let csv = 'Kelompok Ekstensi - Analisis Konvergensi\nFungsi,'+expr+'\nBatas,['+a+' - '+b+']\n\n';
+  csv += 'n,'+methods.map(m => METHOD_META[m].short).join(',')+'\n';
+  const savedMethod = activeMethod;
+  nVals.forEach(nv => {
+    const row = [nv];
+    methods.forEach(m => {
+      activeMethod = m;
+      let nM=nv, hM=(b-a)/nv;
+      if(m==='simp'&&nv%2!==0){nM=nv+1;hM=(b-a)/nM;}
+      if(m==='simp38'){nM=nv;while(nM%3!==0)nM++;hM=(b-a)/nM;}
+      const res = runMethod(expr,a,b,nM,hM);
+      const err = exact!==null&&exact!==0 ? Math.abs((res.total-exact)/exact*100) : '-';
+      row.push(typeof err==='number'?err.toFixed(6):err);
+    });
+    csv += row.join(',')+'\n';
+  });
+  activeMethod = savedMethod;
+  downloadFile(csv, 'Konvergensi_Ekstensi.csv', 'text/csv');
+}
+
+function exportTableCSV() {
+  if (!lastResult) return;
+  const { result,exact,expr,a,b,n,h } = lastResult;
+  const meta = METHOD_META[activeMethod];
+  const formulaMap = {
+    left:  'L = h * f(xi),  xi = a + i*h,  h = (b-a)/n',
+    right: 'L = h * f(xi),  xi = a + (i+1)*h,  h = (b-a)/n',
+    mid:   'L = h * f(xi + h/2),  h = (b-a)/n',
+    trap:  'L = (b-a)/2 * (f(a) + f(b))',
+    ctrap: 'Li = h/2 * (f(xi) + f(xi+1)),  h = (b-a)/n',
+    simp:  'Li = h/3 * (f(x2i) + 4*f(x2i+1) + f(x2i+2)),  n harus genap',
+    simp38:'Li = 3h/8 * (f(x3i) + 3*f(x3i+1) + 3*f(x3i+2) + f(x3i+3)),  n kelipatan 3',
+  };
+  let csv = '=== KELOMPOK EKSTENSI - TABEL PERHITUNGAN INTEGRASI NUMERIK ===\n\n';
+  csv += 'INFORMASI UMUM\n';
+  csv += 'Fungsi f(x),='+expr+'\n';
+  csv += 'Metode,'+meta.name+'\n';
+  csv += 'Formula,'+formulaMap[activeMethod]+'\n';
+  csv += 'Batas Bawah (a),'+a+'\n';
+  csv += 'Batas Atas (b),'+b+'\n';
+  csv += 'Jumlah Partisi (n),'+n+'\n';
+  csv += 'Lebar Langkah (h),'+fmt(h,10)+'\n';
+  csv += '\n';
+
+  const isSimpson38 = activeMethod==='simp38';
+  const isSimpson = activeMethod==='simp';
+  const isTrap = ['trap','ctrap'].includes(activeMethod);
+
+  csv += 'TABEL PERHITUNGAN\n';
+  if(isSimpson38){
+    csv += 'Segmen (i),x0,x1,x2,x3,f(x0),f(x1),f(x2),f(x3),Koefisien,Li = 3h/8*(f0+3f1+3f2+f3)\n';
+    result.rows.forEach(r=>{
+      csv += r.i+','+fmt(r.xi,10)+','+fmt(r.x1,10)+','+fmt(r.x2,10)+','+fmt(r.xEnd,10)+','
+        +fmt(r.f0,10)+','+fmt(r.f1,10)+','+fmt(r.f2,10)+','+fmt(r.f3,10)+',"1-3-3-1",'+fmt(r.li,10)+'\n';
+    });
+  } else if(isSimpson){
+    csv += 'Segmen (i),x0,x1 (mid),x2,f(x0),f(x1),f(x2),Koefisien,Li = h/3*(f0+4f1+f2)\n';
+    result.rows.forEach(r=>{
+      csv += r.i+','+fmt(r.xi,10)+','+fmt(r.xMid,10)+','+fmt(r.xEnd,10)+','
+        +fmt(r.f0,10)+','+fmt(r.f1,10)+','+fmt(r.f2,10)+',"1-4-1",'+fmt(r.li,10)+'\n';
+    });
+  } else if(isTrap){
+    csv += 'i,xi,xi+1,f(xi),f(xi+1),Li = h/2*(f(xi)+f(xi+1))\n';
+    result.rows.forEach(r=>{
+      csv += r.i+','+fmt(r.xi,10)+','+fmt(r.xEnd,10)+','+fmt(r.fxi,10)+','+fmt(r.fxEnd,10)+','+fmt(r.li,10)+'\n';
+    });
+  } else {
+    const fLabel = activeMethod==='left'?'f(xi) - ujung kiri':activeMethod==='right'?'f(xi) - ujung kanan':'f(xi+h/2) - titik tengah';
+    csv += 'i,xi,'+fLabel+',Li = h*f(xi)\n';
+    result.rows.forEach(r=>{
+      csv += r.i+','+fmt(r.xi,10)+','+fmt(r.fxi,10)+','+fmt(r.li,10)+'\n';
+    });
+  }
+  csv += '\nHASIL\n';
+  csv += 'Total Integral (aproksimasi),'+fmt(result.total,10)+'\n';
+  csv += 'Nilai Referensi (n=10000),'+(exact!==null?fmt(exact,10):'-')+'\n';
+  const errAbs = exact!==null?Math.abs(result.total-exact):null;
+  const errRel = exact!==null&&exact!==0?Math.abs((result.total-exact)/exact*100):null;
+  csv += 'Error Absolut,'+(errAbs!==null?fmt(errAbs,10):'-')+'\n';
+  csv += 'Error Relatif (%),'+(errRel!==null?errRel.toFixed(6)+'%':'-')+'\n';
+  csv += '\nDibuat oleh Kelompok Ekstensi - Komputasi Numerik A11.4610\n';
+  downloadFile(csv, 'Tabel_'+meta.short+'_Ekstensi.csv', 'text/csv');
+}
+
+function exportComparePDF() {
+  if (!lastResult) return;
+  const { expr,a,b,n,h,exact } = lastResult;
+  const allRes = runAllMethods(expr,a,b,n,h,exact);
+  const sorted = [...allRes].sort((x,y)=>(x.errRel??Infinity)-(y.errRel??Infinity));
+  const best = sorted[0];
+  let rows = allRes.map(r => {
+    const isBest = r.m===best.m;
+    return '<tr style="background:'+(isBest?'#D1FAE5':'#fff')+'"><td style="padding:8px 10px;font-size:12px;font-weight:'+(isBest?'bold':'normal')+';color:'+r.color+'">'+r.name+(isBest?' ★':'')+'</td>'
+      +'<td style="padding:8px 10px;font-family:monospace;font-size:12px">'+fmt(r.total)+'</td>'
+      +'<td style="padding:8px 10px;font-family:monospace;font-size:12px">'+(r.errAbs!==null?fmt(r.errAbs):'-')+'</td>'
+      +'<td style="padding:8px 10px;font-family:monospace;font-size:12px;font-weight:'+(isBest?'bold':'normal')+'">'+(r.errRel!==null?r.errRel.toFixed(6)+'%':'-')+'</td></tr>';
+  }).join('');
+  const win = window.open('','_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Laporan Perbandingan - Kelompok Ekstensi</title>'
+    +'<style>body{font-family:Arial,sans-serif;padding:32px;color:#1E293B;max-width:800px;margin:auto}'
+    +'h1{font-size:20px;color:#2563EB;margin-bottom:4px}.sub{font-size:13px;color:#64748B;margin-bottom:20px}'
+    +'table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#2563EB;color:white;padding:9px 10px;text-align:left;font-size:12px}'
+    +'td{border-bottom:1px solid #E2E8F4}.info{background:#F1F5FD;border-radius:8px;padding:14px;margin-bottom:20px;font-size:13px}'
+    +'.info b{color:#2563EB}.footer{margin-top:32px;font-size:11px;color:#94A3B8;text-align:center}</style></head><body>'
+    +'<h1>Laporan Perbandingan Metode Integrasi Numerik</h1>'
+    +'<div class="sub">Kelompok Ekstensi &nbsp;·&nbsp; Komputasi Numerik A11.4610</div>'
+    +'<div class="info"><b>Fungsi:</b> f(x) = '+expr+' &nbsp;&nbsp;<b>Batas:</b> ['+a+', '+b+'] &nbsp;&nbsp;<b>n:</b> '+n+' &nbsp;&nbsp;<b>Referensi:</b> '+(exact!==null?fmt(exact):'-')+'</div>'
+    +'<table><thead><tr><th>Metode</th><th>Nilai Aproksimasi</th><th>Error Absolut</th><th>Error Relatif (%)</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table>'
+    +'<div class="footer">Kelompok Ekstensi · Komputasi Numerik A11.4610 · '+new Date().toLocaleDateString('id-ID')+'</div>'
+    +'<script>window.onload=()=>{window.print()}<\/script></body></html>');
+  win.document.close();
+}
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('aInput').addEventListener('input', updateHLabel);
+document.getElementById('bInput').addEventListener('input', updateHLabel);
+document.getElementById('nInput').addEventListener('input', updateHLabel);
+
+// Auto-compute on load
+window.addEventListener('load', () => { compute(); });
+</script>
+</body>
+</html>
