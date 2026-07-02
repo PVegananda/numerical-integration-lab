@@ -920,33 +920,61 @@
       <div class="summary-wrap">
         <div class="method-card">
           <div class="method-card-header">
-            <span class="method-card-title">Kegunaan Integrasi Numerik di Dunia Nyata</span>
+            <span class="method-card-title">Penerapan Logika Integrasi Numerik dalam Kode (Real-world)</span>
           </div>
           <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;">
-            Tidak semua perhitungan dapat diselesaikan menggunakan integral analitik manual. Di dunia nyata, banyak data berupa titik-titik diskrit (sensor) atau fungsi kompleks yang mengharuskan penggunaan metode numerik.
+            Berikut adalah contoh peragaan bagaimana teknik <strong>Integrasi Numerik</strong> diterapkan secara langsung di dalam logika pemrograman. Di dunia nyata, seringkali kita tidak memiliki fungsi matematika beraturan, melainkan sekumpulan data dari pembacaan sensor. 
+            <br><br>
+            <strong>Studi Kasus:</strong> Menghitung total jarak tempuh kendaraan berdasarkan data sensor kecepatan (speedometer) yang dikirim setiap beberapa detik. Karena Integral dari Kecepatan terhadap Waktu adalah Jarak Tempuh, kita dapat menggunakan <strong>Metode Trapesium (Composite Trapezoidal Rule)</strong> untuk menjumlahkan luas area di bawah kurva kecepatan.
           </p>
           
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--blue)">
-              <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">1. Teknik Sipil & Pemetaan Lahan (Surveying)</div>
-              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Menghitung luas dan volume area tanah yang memiliki lekukan tidak beraturan. Tanah tidak memiliki fungsi matematika pasti, sehingga integrasi numerik digunakan pada kordinat data elevasi diskrit.</div>
-            </div>
-            
-            <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--green)">
-              <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">2. Otomotif & Data Sensor (IoT)</div>
-              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Menentukan total jarak tempuh sebuah kendaraan hanya berbekal data kecepatan sesaat dari sensor (speedometer). Karena integral dari kurva kecepatan terhadap waktu adalah jarak tempuh, metode trapesium sangat ideal diterapkan secara *real-time*.</div>
-            </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--blue);overflow-x:auto;">
+            <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:8px;font-family:'Space Mono',monospace;">// Implementasi Kode Integrasi Numerik (JavaScript)</div>
+            <pre style="margin:0;font-family:'Space Mono',monospace;font-size:12px;color:var(--text);line-height:1.6;background:transparent;border:none;">
+// Data pembacaan sensor kecepatan kendaraan
+// time (detik) dan velocity (meter/detik)
+const sensorData = [
+  { time: 0,  velocity: 0.0 },
+  { time: 2,  velocity: 5.5 },
+  { time: 4,  velocity: 12.0 },
+  { time: 6,  velocity: 15.2 },
+  { time: 8,  velocity: 14.8 },
+  { time: 10, velocity: 16.0 }
+];
 
-            <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--amber)">
-              <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">3. Statistik, AI & Data Science</div>
-              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Fungsi probabilitas pada kurva Distribusi Normal / Gauss <span style="font-family:Space Mono;background:#e2e8f4;padding:2px 4px;border-radius:4px;font-size:11px;">exp(-x²)</span> adalah contoh klasik fungsi yang secara matematis <b>tidak bisa diintegralkan</b> secara manual. Menghitung besaran peluang wajib menggunakan numerik seperti aturan Simpson.</div>
-            </div>
+// Fungsi untuk menghitung jarak menggunakan Integrasi Numerik
+function calculateTotalDistance(data) {
+  let totalDistance = 0;
+  
+  // Looping melalui setiap titik data (membagi area menjadi partisi/trapesium)
+  for (let i = 0; i < data.length - 1; i++) {
+    let t0 = data[i].time;
+    let t1 = data[i+1].time;
+    let v0 = data[i].velocity;
+    let v1 = data[i+1].velocity;
+    
+    // Lebar partisi (delta x atau h)
+    let h = t1 - t0;
+    
+    // Luas trapesium: (f(x0) + f(x1)) / 2 * h
+    let area = ((v0 + v1) / 2) * h;
+    
+    // Akumulasi luas area (Integrasi)
+    totalDistance += area;
+  }
+  
+  return totalDistance;
+}
 
-            <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--purple)">
-              <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">4. Fisika Medis (Radiologi & Radioterapi)</div>
-              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Total dosis radiasi yang diserap pasien X-Ray merupakan integral dari laju paparan radiasi (waktu). Perhitungan ini harus dikomputasi menggunakan metode numerik presisi tinggi guna memastikan keamanan pasien.</div>
-            </div>
+const jarakTempuh = calculateTotalDistance(sensorData);
+console.log(`Total jarak tempuh: ${jarakTempuh} meter`); // Output: 103.5 meter
+            </pre>
           </div>
+          
+          <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-top:16px;">
+            <strong>Mengapa hanya menggunakan Integrasi Numerik?</strong><br>
+            Metode pencarian akar persamaan seperti <em>Newton-Raphson, Bisection, atau Secant</em> digunakan untuk mencari titik potong sumbu-x (mencari kapan nilai <code>f(x) = 0</code>). Sedangkan pada kasus di atas, tujuan kita adalah <strong>menghitung akumulasi total (luas area di bawah kurva)</strong>, sehingga teknik yang secara eksklusif dapat menyelesaikan masalah ini adalah <strong>Integrasi Numerik</strong> (Trapesium, Riemann, atau Simpson).
+          </p>
         </div>
       </div>
     </div>
