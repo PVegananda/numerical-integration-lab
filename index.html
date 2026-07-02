@@ -828,6 +828,9 @@
       <button class="tab-btn" onclick="switchTab('conclusion')">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:5px"><path d="M2 7l3 3 7-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>Kesimpulan
       </button>
+      <button class="tab-btn" onclick="switchTab('usecase')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:5px"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Kasus Nyata
+      </button>
     </div>
 
     <!-- TAB: Chart -->
@@ -908,6 +911,42 @@
           <div class="empty-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M8 24l10 10 22-20" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
           <div class="empty-title">Belum ada kesimpulan</div>
           <div class="empty-desc">Klik "Hitung Integral" untuk melihat rekomendasi metode terbaik.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Kasus Nyata -->
+    <div class="tab-panel" id="tab-usecase">
+      <div class="summary-wrap">
+        <div class="method-card">
+          <div class="method-card-header">
+            <span class="method-card-title">Kegunaan Integrasi Numerik di Dunia Nyata</span>
+          </div>
+          <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;">
+            Tidak semua perhitungan dapat diselesaikan menggunakan integral analitik manual. Di dunia nyata, banyak data berupa titik-titik diskrit (sensor) atau fungsi kompleks yang mengharuskan penggunaan metode numerik.
+          </p>
+          
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--blue)">
+              <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">1. Teknik Sipil & Pemetaan Lahan (Surveying)</div>
+              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Menghitung luas dan volume area tanah yang memiliki lekukan tidak beraturan. Tanah tidak memiliki fungsi matematika pasti, sehingga integrasi numerik digunakan pada kordinat data elevasi diskrit.</div>
+            </div>
+            
+            <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--green)">
+              <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">2. Otomotif & Data Sensor (IoT)</div>
+              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Menentukan total jarak tempuh sebuah kendaraan hanya berbekal data kecepatan sesaat dari sensor (speedometer). Karena integral dari kurva kecepatan terhadap waktu adalah jarak tempuh, metode trapesium sangat ideal diterapkan secara *real-time*.</div>
+            </div>
+
+            <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--amber)">
+              <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">3. Statistik, AI & Data Science</div>
+              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Fungsi probabilitas pada kurva Distribusi Normal / Gauss <span style="font-family:Space Mono;background:#e2e8f4;padding:2px 4px;border-radius:4px;font-size:11px;">exp(-x²)</span> adalah contoh klasik fungsi yang secara matematis <b>tidak bisa diintegralkan</b> secara manual. Menghitung besaran peluang wajib menggunakan numerik seperti aturan Simpson.</div>
+            </div>
+
+            <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--purple)">
+              <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">4. Fisika Medis (Radiologi & Radioterapi)</div>
+              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Total dosis radiasi yang diserap pasien X-Ray merupakan integral dari laju paparan radiasi (waktu). Perhitungan ini harus dikomputasi menggunakan metode numerik presisi tinggi guna memastikan keamanan pasien.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
