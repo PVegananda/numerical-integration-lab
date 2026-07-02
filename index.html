@@ -932,8 +932,12 @@ const METHOD_META = {
 };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
+const exprCache = {};
 function evalF(expr, x) {
-  return math.evaluate(expr, { x });
+  if (!exprCache[expr]) {
+    exprCache[expr] = math.compile(expr);
+  }
+  return exprCache[expr].evaluate({ x });
 }
 
 function parseInputs() {
@@ -982,13 +986,13 @@ function switchTab(id) {
 // ─── NUMERICAL METHODS ───────────────────────────────────────────────────────
 function computeExact(expr, a, b) {
   try {
-    // Numerical estimate with very high n as "exact" reference
-    let s = 0, N = 10000, h = (b - a) / N;
-    for (let i = 0; i < N; i++) {
-      let x0 = a + i * h, x1 = a + (i + 1) * h;
-      s += (evalF(expr, x0) + evalF(expr, x1)) * h / 2;
+    // Numerical estimate with very high n using Simpson 1/3 rule for precise reference
+    let N = 10000, h = (b - a) / N;
+    let sum = evalF(expr, a) + evalF(expr, b);
+    for (let i = 1; i < N; i++) {
+      sum += evalF(expr, a + i * h) * (i % 2 === 0 ? 2 : 4);
     }
-    return s;
+    return (sum * h) / 3;
   } catch { return null; }
 }
 
@@ -1057,7 +1061,7 @@ function methodCTrap(expr, a, b, n, h) {
 
 function methodSimpson(expr, a, b, n, h) {
   // Composite Simpson 1/3: n must be even
-  if (n % 2 !== 0) n += 1;
+  if (n % 2 !== 0) { n += 1; h = (b - a) / n; }
   const rows = [];
   let total = 0;
   const pts = [];
@@ -1079,6 +1083,7 @@ function methodSimpson(expr, a, b, n, h) {
 function methodSimpson38(expr, a, b, n, h) {
   // Composite Simpson 3/8: n harus kelipatan 3
   while (n % 3 !== 0) n += 1;
+  h = (b - a) / n;
   const rows = [];
   let total = 0;
   for (let i = 0; i < n; i += 3) {
