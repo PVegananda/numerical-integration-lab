@@ -928,53 +928,74 @@
             <strong>Studi Kasus:</strong> Menghitung total jarak tempuh kendaraan berdasarkan data sensor kecepatan (speedometer) yang dikirim setiap beberapa detik. Karena Integral dari Kecepatan terhadap Waktu adalah Jarak Tempuh, kita dapat menggunakan <strong>Metode Trapesium (Composite Trapezoidal Rule)</strong> untuk menjumlahkan luas area di bawah kurva kecepatan.
           </p>
           
-          <div style="background:var(--surface2);border-radius:8px;padding:14px;border-left:4px solid var(--blue);overflow-x:auto;">
-            <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:8px;font-family:'Space Mono',monospace;">// Implementasi Kode Integrasi Numerik (JavaScript)</div>
-            <pre style="margin:0;font-family:'Space Mono',monospace;font-size:12px;color:var(--text);line-height:1.6;background:transparent;border:none;">
-// Data pembacaan sensor kecepatan kendaraan
-// time (detik) dan velocity (meter/detik)
-const sensorData = [
-  { time: 0,  velocity: 0.0 },
-  { time: 2,  velocity: 5.5 },
-  { time: 4,  velocity: 12.0 },
-  { time: 6,  velocity: 15.2 },
-  { time: 8,  velocity: 14.8 },
-  { time: 10, velocity: 16.0 }
-];
-
-// Fungsi untuk menghitung jarak menggunakan Integrasi Numerik
-function calculateTotalDistance(data) {
-  let totalDistance = 0;
-  
-  // Looping melalui setiap titik data (membagi area menjadi partisi/trapesium)
-  for (let i = 0; i < data.length - 1; i++) {
-    let t0 = data[i].time;
-    let t1 = data[i+1].time;
-    let v0 = data[i].velocity;
-    let v1 = data[i+1].velocity;
-    
-    // Lebar partisi (delta x atau h)
-    let h = t1 - t0;
-    
-    // Luas trapesium: (f(x0) + f(x1)) / 2 * h
-    let area = ((v0 + v1) / 2) * h;
-    
-    // Akumulasi luas area (Integrasi)
-    totalDistance += area;
-  }
-  
-  return totalDistance;
-}
-
-const jarakTempuh = calculateTotalDistance(sensorData);
-console.log(`Total jarak tempuh: ${jarakTempuh} meter`); // Output: 103.5 meter
-            </pre>
+          <div style="background:var(--surface2); border-radius:8px; padding:16px; border:1px solid var(--border);">
+            <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:12px;">Kalkulator Jarak Tempuh Berdasarkan Data Sensor Kecepatan</div>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px; background:var(--surface); border-radius:6px; overflow:hidden; font-family:'Space Mono',monospace; font-size:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <thead>
+                <tr style="background:var(--blue-light); color:var(--blue);">
+                  <th style="padding:10px; text-align:left; border-bottom:1px solid var(--border);">Waktu (detik)</th>
+                  <th style="padding:10px; text-align:left; border-bottom:1px solid var(--border);">Kecepatan (m/s)</th>
+                </tr>
+              </thead>
+              <tbody id="sensorTableBody">
+                <!-- Diisi oleh JS -->
+              </tbody>
+            </table>
+            
+            <div style="display:flex; gap:12px; align-items:center;">
+              <button onclick="calcRealWorld()" style="background:linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%); color:white; border:none; padding:12px 18px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; font-size:13px; transition:opacity 0.2s;">
+                Hitung Jarak (Integrasi Trapesium)
+              </button>
+              <div id="realWorldResult" style="font-family:'Space Mono',monospace; font-weight:700; font-size:15px; color:var(--green); background:var(--green-light); padding:10px 16px; border-radius:8px; display:none; border: 1px solid #10B981;">
+                Total Jarak = <span id="rwJarak">0</span> meter
+              </div>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:14px; margin-bottom:0; line-height: 1.5;">
+              *Ubah nilai kecepatan pada tabel di atas, lalu klik tombol hitung. Aplikasi ini akan mengakumulasi luas area di bawah kurva kecepatan menggunakan <strong>Metode Composite Trapezoidal</strong> untuk mendapatkan total jarak tempuh sesungguhnya.
+            </p>
           </div>
-          
-          <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-top:16px;">
-            <strong>Mengapa hanya menggunakan Integrasi Numerik?</strong><br>
-            Metode pencarian akar persamaan seperti <em>Newton-Raphson, Bisection, atau Secant</em> digunakan untuk mencari titik potong sumbu-x (mencari kapan nilai <code>f(x) = 0</code>). Sedangkan pada kasus di atas, tujuan kita adalah <strong>menghitung akumulasi total (luas area di bawah kurva)</strong>, sehingga teknik yang secara eksklusif dapat menyelesaikan masalah ini adalah <strong>Integrasi Numerik</strong> (Trapesium, Riemann, atau Simpson).
-          </p>
+
+          <script>
+            const defaultSensorData = [
+              { t: 0, v: 0.0 },
+              { t: 2, v: 5.5 },
+              { t: 4, v: 12.0 },
+              { t: 6, v: 15.2 },
+              { t: 8, v: 14.8 },
+              { t: 10, v: 16.0 }
+            ];
+
+            function renderSensorTable() {
+              const tbody = document.getElementById('sensorTableBody');
+              if(!tbody) return;
+              tbody.innerHTML = defaultSensorData.map((d, i) => `
+                <tr>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); font-weight:600; color:var(--text-muted);">\${d.t}</td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border);">
+                    <input type="number" step="0.1" value="\${d.v}" id="sv_\${i}" style="width:100px; padding:6px 10px; border:2px solid var(--border); border-radius:6px; font-family:'Space Mono',monospace; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+                  </td>
+                </tr>
+              `).join('');
+            }
+
+            function calcRealWorld() {
+              let totalDist = 0;
+              for (let i = 0; i < defaultSensorData.length - 1; i++) {
+                const t0 = defaultSensorData[i].t;
+                const t1 = defaultSensorData[i+1].t;
+                const v0 = parseFloat(document.getElementById('sv_' + i).value) || 0;
+                const v1 = parseFloat(document.getElementById('sv_' + (i+1)).value) || 0;
+                
+                const h = t1 - t0;
+                totalDist += ((v0 + v1) / 2) * h;
+              }
+              
+              document.getElementById('rwJarak').textContent = totalDist.toFixed(2);
+              document.getElementById('realWorldResult').style.display = 'block';
+            }
+
+            window.addEventListener('load', renderSensorTable);
+          </script>
         </div>
       </div>
     </div>
