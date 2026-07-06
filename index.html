@@ -917,87 +917,274 @@
 
     <!-- TAB: Kasus Nyata -->
     <div class="tab-panel" id="tab-usecase">
-      <div class="summary-wrap">
-        <div class="method-card">
-          <div class="method-card-header">
-            <span class="method-card-title">Penerapan Logika Integrasi Numerik dalam Kode (Real-world)</span>
-          </div>
-          <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;">
-            Berikut adalah contoh peragaan bagaimana teknik <strong>Integrasi Numerik</strong> diterapkan secara langsung di dalam logika pemrograman. Di dunia nyata, seringkali kita tidak memiliki fungsi matematika beraturan, melainkan sekumpulan data dari pembacaan sensor. 
-            <br><br>
-            <strong>Studi Kasus:</strong> Menghitung total jarak tempuh kendaraan berdasarkan data sensor kecepatan (speedometer) yang dikirim setiap beberapa detik. Karena Integral dari Kecepatan terhadap Waktu adalah Jarak Tempuh, kita dapat menggunakan <strong>Metode Trapesium (Composite Trapezoidal Rule)</strong> untuk menjumlahkan luas area di bawah kurva kecepatan.
-          </p>
-          
-          <div style="background:var(--surface2); border-radius:8px; padding:16px; border:1px solid var(--border);">
-            <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:12px;">Kalkulator Jarak Tempuh Berdasarkan Data Sensor Kecepatan</div>
-            <table style="width:100%; border-collapse:collapse; margin-bottom:16px; background:var(--surface); border-radius:6px; overflow:hidden; font-family:'Space Mono',monospace; font-size:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-              <thead>
-                <tr style="background:var(--blue-light); color:var(--blue);">
-                  <th style="padding:10px; text-align:left; border-bottom:1px solid var(--border);">Waktu (detik)</th>
-                  <th style="padding:10px; text-align:left; border-bottom:1px solid var(--border);">Kecepatan (m/s)</th>
-                </tr>
-              </thead>
-              <tbody id="sensorTableBody">
-                <!-- Diisi oleh JS -->
-              </tbody>
-            </table>
-            
-            <div style="display:flex; gap:12px; align-items:center;">
-              <button onclick="calcRealWorld()" style="background:linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%); color:white; border:none; padding:12px 18px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:700; cursor:pointer; font-size:13px; transition:opacity 0.2s;">
-                Hitung Jarak (Integrasi Trapesium)
-              </button>
-              <div id="realWorldResult" style="font-family:'Space Mono',monospace; font-weight:700; font-size:15px; color:var(--green); background:var(--green-light); padding:10px 16px; border-radius:8px; display:none; border: 1px solid #10B981;">
-                Total Jarak = <span id="rwJarak">0</span> meter
-              </div>
+      <style>
+        .lg-container { font-family: 'Poppins', sans-serif; line-height: 1.6; padding-bottom: 20px; }
+        .lg-header { background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .lg-header h1 { font-size: 1.6rem; margin-bottom: 6px; font-weight: 700; color: white; }
+        .lg-header p { font-size: 0.95rem; opacity: 0.9; margin: 0; }
+        .lg-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2e8f4; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .lg-card h2 { color: #1e40af; font-size: 1.2rem; margin-bottom: 14px; font-weight: 600; border-bottom: 2px solid #eff6ff; padding-bottom: 8px; }
+        .lg-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        @media (max-width: 900px) { .lg-grid { grid-template-columns: 1fr; } }
+        .lg-table-wrapper { overflow-x: auto; margin-bottom: 16px; border-radius: 8px; border: 1px solid #e2e8f4; }
+        .lg-table { width: 100%; border-collapse: collapse; }
+        .lg-table th, .lg-table td { padding: 8px 12px; text-align: right; border-bottom: 1px solid #e2e8f4; }
+        .lg-table th { background: #eff6ff; color: #1e40af; font-weight: 600; font-size: 0.9rem; }
+        .lg-table td { font-family: monospace; font-size: 13px; }
+        .lg-btn { display: block; width: 100%; background: linear-gradient(135deg, #3b82f6, #1e40af); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+        .lg-btn:hover { transform: translateY(-2px); }
+        .lg-chart-container { position: relative; height: 300px; width: 100%; }
+        .lg-alert { padding: 14px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; display: none; font-size: 0.95rem; }
+        .lg-alert-error { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+        .lg-h-value { font-size: 1rem; margin-bottom: 20px; padding: 12px 16px; background: #eff6ff; border-radius: 8px; display: inline-block; border: 1px solid #bfdbfe; }
+        .lg-h-value strong { color: #1e40af; font-size: 1.3rem; margin: 0 6px; }
+        .lg-res-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+        @media (max-width: 768px) { .lg-res-grid { grid-template-columns: 1fr; } }
+        .lg-res-box { padding: 16px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f4; }
+        .lg-box-trap { background: #f8fafc; }
+        .lg-box-simp13 { background: #f0fdf4; border-color: #bbf7d0; }
+        .lg-box-simp38 { background: #eff6ff; border-color: #bfdbfe; }
+        .lg-res-box h3 { font-size: 0.9rem; color: #64748b; margin-bottom: 6px; font-weight: 600; }
+        .lg-res-val { font-size: 1.6rem; font-weight: 700; color: #1e293b; font-family: monospace; }
+        .lg-res-unit { font-size: 0.85rem; color: #64748b; }
+        .lg-diff-sec { background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f4; }
+        .lg-diff-sec h3 { font-size: 1rem; margin-bottom: 10px; }
+        .lg-diff-list { list-style: none; padding: 0; margin: 0; }
+        .lg-diff-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e2e8f4; color: #64748b; font-size: 0.9rem; }
+        .lg-diff-list li:last-child { border-bottom: none; }
+        .lg-diff-list li span:last-child { font-weight: 700; font-family: monospace; color: #1e40af; }
+        .lg-theory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .lg-theory-grid { grid-template-columns: 1fr; } }
+        .lg-theory-grid h3 { font-size: 1rem; color: #1e293b; margin-bottom: 6px; font-weight: 600; }
+        .lg-theory-grid p { color: #64748b; font-size: 0.85rem; margin: 0; }
+      </style>
+
+      <div class="lg-container">
+        <div class="lg-header">
+            <h1>Kalkulasi Jarak Tempuh Logistik</h1>
+            <p>Studi Kasus Penghitungan Estimasi Jarak Tempuh Berdasarkan Data Kecepatan Diskrit (GPS)</p>
+        </div>
+
+        <div class="lg-card">
+            <h2>Studi Kasus</h2>
+            <p style="color: #64748b; font-size: 0.9rem; margin:0;">Sebuah perusahaan logistik ingin mengetahui jarak yang ditempuh salah satu armada pengirimannya. Kendaraan tersebut dilengkapi sensor GPS yang mencatat kecepatan setiap 10 detik. Karena data berasal dari sensor, perusahaan tidak memiliki fungsi matematika yang kontinu. Oleh karena itu, estimasi jarak dihitung menggunakan metode <strong>Integrasi Numerik</strong>.</p>
+        </div>
+
+        <div class="lg-grid">
+            <div class="lg-card">
+                <h2>Data Sensor Kecepatan</h2>
+                <div class="lg-table-wrapper">
+                    <table class="lg-table">
+                        <thead>
+                            <tr>
+                                <th>Waktu (s)</th>
+                                <th>Kecepatan (m/s)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lgDataBody"></tbody>
+                    </table>
+                </div>
+                <button id="lgCalcBtn" class="lg-btn">Hitung Integrasi Numerik</button>
             </div>
-            <p style="font-size:12px; color:var(--text-muted); margin-top:14px; margin-bottom:0; line-height: 1.5;">
-              *Ubah nilai kecepatan pada tabel di atas, lalu klik tombol hitung. Aplikasi ini akan mengakumulasi luas area di bawah kurva kecepatan menggunakan <strong>Metode Composite Trapezoidal</strong> untuk mendapatkan total jarak tempuh sesungguhnya.
-            </p>
-          </div>
 
-          <script>
-            const defaultSensorData = [
-              { t: 0, v: 0.0 },
-              { t: 2, v: 5.5 },
-              { t: 4, v: 12.0 },
-              { t: 6, v: 15.2 },
-              { t: 8, v: 14.8 },
-              { t: 10, v: 16.0 }
-            ];
+            <div class="lg-card">
+                <h2>Grafik Kecepatan</h2>
+                <div class="lg-chart-container">
+                    <canvas id="lgVelocityChart"></canvas>
+                </div>
+            </div>
+        </div>
 
-            function renderSensorTable() {
-              const tbody = document.getElementById('sensorTableBody');
-              if(!tbody) return;
-              tbody.innerHTML = defaultSensorData.map((d, i) => `
-                <tr>
-                  <td style="padding:10px; border-bottom:1px solid var(--border); font-weight:600; color:var(--text-muted);">\${d.t}</td>
-                  <td style="padding:10px; border-bottom:1px solid var(--border);">
-                    <input type="number" step="0.1" value="\${d.v}" id="sv_\${i}" style="width:100px; padding:6px 10px; border:2px solid var(--border); border-radius:6px; font-family:'Space Mono',monospace; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
-                  </td>
-                </tr>
-              `).join('');
-            }
-
-            function calcRealWorld() {
-              let totalDist = 0;
-              for (let i = 0; i < defaultSensorData.length - 1; i++) {
-                const t0 = defaultSensorData[i].t;
-                const t1 = defaultSensorData[i+1].t;
-                const v0 = parseFloat(document.getElementById('sv_' + i).value) || 0;
-                const v1 = parseFloat(document.getElementById('sv_' + (i+1)).value) || 0;
+        <div id="lgResultsSection" class="lg-card" style="display: none;">
+            <h2>Hasil Perhitungan</h2>
+            <div id="lgErrorAlert" class="lg-alert lg-alert-error"></div>
+            
+            <div id="lgSuccessResults">
+                <div class="lg-h-value">
+                    <span>Nilai Interval (h):</span>
+                    <strong id="lgHResult">-</strong> <span>detik</span>
+                </div>
                 
-                const h = t1 - t0;
-                totalDist += ((v0 + v1) / 2) * h;
-              }
-              
-              document.getElementById('rwJarak').textContent = totalDist.toFixed(2);
-              document.getElementById('realWorldResult').style.display = 'block';
-            }
+                <div class="lg-res-grid">
+                    <div class="lg-res-box lg-box-trap">
+                        <h3>Metode Trapesium</h3>
+                        <div class="lg-res-val" id="lgTrapResult">-</div>
+                        <div class="lg-res-unit">meter</div>
+                    </div>
+                    <div class="lg-res-box lg-box-simp13">
+                        <h3>Metode Simpson 1/3</h3>
+                        <div class="lg-res-val" id="lgSimp13Result">-</div>
+                        <div class="lg-res-unit">meter</div>
+                    </div>
+                    <div class="lg-res-box lg-box-simp38">
+                        <h3>Metode Simpson 3/8</h3>
+                        <div class="lg-res-val" id="lgSimp38Result">-</div>
+                        <div class="lg-res-unit">meter</div>
+                    </div>
+                </div>
 
-            window.addEventListener('load', renderSensorTable);
-          </script>
+                <div class="lg-diff-sec">
+                    <h3>Selisih Antar Metode</h3>
+                    <ul class="lg-diff-list" id="lgDiffList"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg-card">
+            <h2>Penjelasan Komputasi</h2>
+            <div class="lg-theory-grid">
+                <div>
+                    <h3>Apa itu Integrasi Numerik?</h3>
+                    <p>Integrasi numerik adalah kumpulan algoritma untuk menghitung nilai aproksimasi integral tanpa memecahkan persamaan matematisnya secara analitik.</p>
+                </div>
+                <div>
+                    <h3>Mengapa digunakan pada kasus ini?</h3>
+                    <p>Integral kecepatan terhadap waktu adalah jarak. Karena kita hanya memiliki titik data diskrit dari sensor, metode numerik adalah satu-satunya solusi.</p>
+                </div>
+                <div>
+                    <h3>Mengapa hasil bisa berbeda?</h3>
+                    <p>Trapesium memodelkan area dengan garis lurus (orde 1), Simpson 1/3 dengan kurva parabola (orde 2), dan Simpson 3/8 dengan kurva kubik (orde 3).</p>
+                </div>
+                <div>
+                    <h3>Metode mana yang lebih akurat?</h3>
+                    <p>Metode Simpson (1/3 dan 3/8) memiliki orde error O(h⁴) yang jauh lebih presisi dibandingkan metode Trapesium O(h²).</p>
+                </div>
+            </div>
         </div>
       </div>
+
+      <script>
+        (function() {
+            const lgData = [
+                { t: 0, v: 0 },
+                { t: 10, v: 8 },
+                { t: 20, v: 15 },
+                { t: 30, v: 18 },
+                { t: 40, v: 20 },
+                { t: 50, v: 19 },
+                { t: 60, v: 17 }
+            ];
+
+            let lgChartInstance = null;
+
+            function initLgApp() {
+                const tbody = document.getElementById("lgDataBody");
+                if(!tbody) return;
+                tbody.innerHTML = "";
+                lgData.forEach(row => {
+                    tbody.innerHTML += `<tr><td>${row.t}</td><td>${row.v}</td></tr>`;
+                });
+
+                const ctx = document.getElementById('lgVelocityChart');
+                if(ctx && !lgChartInstance && window.Chart) {
+                    lgChartInstance = new Chart(ctx.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: lgData.map(d => d.t),
+                            datasets: [{
+                                label: 'Kecepatan (m/s)',
+                                data: lgData.map(d => d.v),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                                borderWidth: 3,
+                                pointBackgroundColor: '#1e40af',
+                                pointRadius: 5,
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { title: { display: true, text: 'Waktu (s)' } },
+                                y: { title: { display: true, text: 'Kecepatan (m/s)' }, beginAtZero: true }
+                            }
+                        }
+                    });
+                }
+            }
+
+            document.getElementById("lgCalcBtn").addEventListener("click", () => {
+                const resultsSec = document.getElementById("lgResultsSection");
+                const errAlert = document.getElementById("lgErrorAlert");
+                const succRes = document.getElementById("lgSuccessResults");
+                
+                resultsSec.style.display = "block";
+                
+                const n = lgData.length - 1;
+                const h = lgData[1].t - lgData[0].t;
+                
+                let isValid = true;
+                let msg = "";
+                for(let i=1; i<=n; i++) {
+                    if (Math.abs((lgData[i].t - lgData[i-1].t) - h) > 1e-6) {
+                        isValid = false; msg = "Data tidak valid: Interval waktu tidak konstan!"; break;
+                    }
+                }
+                
+                if(!isValid) {
+                    errAlert.textContent = msg; errAlert.style.display = "block"; succRes.style.display = "none";
+                    return;
+                }
+                errAlert.style.display = "none"; succRes.style.display = "block";
+                
+                document.getElementById("lgHResult").textContent = h;
+                
+                // Trapesium
+                let trapSum = lgData[0].v + lgData[n].v;
+                for(let i=1; i<n; i++) trapSum += 2 * lgData[i].v;
+                const trapRes = (h/2) * trapSum;
+                document.getElementById("lgTrapResult").textContent = trapRes.toFixed(2);
+                
+                // Simpson 1/3
+                let simp13Res = null;
+                const s13Dom = document.getElementById("lgSimp13Result");
+                if (n % 2 === 0) {
+                    let s13Sum = lgData[0].v + lgData[n].v;
+                    for(let i=1; i<n; i++) s13Sum += (i%2!==0 ? 4 : 2) * lgData[i].v;
+                    simp13Res = (h/3) * s13Sum;
+                    s13Dom.textContent = simp13Res.toFixed(2); s13Dom.style.fontSize = "1.6rem";
+                } else {
+                    s13Dom.textContent = "N/A (n ganjil)"; s13Dom.style.fontSize = "1rem";
+                }
+                
+                // Simpson 3/8
+                let simp38Res = null;
+                const s38Dom = document.getElementById("lgSimp38Result");
+                if (n % 3 === 0) {
+                    let s38Sum = lgData[0].v + lgData[n].v;
+                    for(let i=1; i<n; i++) s38Sum += (i%3===0 ? 2 : 3) * lgData[i].v;
+                    simp38Res = (3*h/8) * s38Sum;
+                    s38Dom.textContent = simp38Res.toFixed(2); s38Dom.style.fontSize = "1.6rem";
+                } else {
+                    s38Dom.textContent = "N/A (bukan klpt 3)"; s38Dom.style.fontSize = "1rem";
+                }
+                
+                // Selisih
+                const dList = document.getElementById("lgDiffList");
+                dList.innerHTML = "";
+                if(simp13Res !== null) {
+                    dList.innerHTML += `<li><span>Trapesium vs Simp 1/3</span> <span>${Math.abs(trapRes - simp13Res).toFixed(2)} m</span></li>`;
+                }
+                if(simp38Res !== null) {
+                    dList.innerHTML += `<li><span>Trapesium vs Simp 3/8</span> <span>${Math.abs(trapRes - simp38Res).toFixed(2)} m</span></li>`;
+                }
+                if(simp13Res !== null && simp38Res !== null) {
+                    dList.innerHTML += `<li><span>Simp 1/3 vs Simp 3/8</span> <span>${Math.abs(simp13Res - simp38Res).toFixed(2)} m</span></li>`;
+                }
+            });
+
+            // Initialisasi
+            const tryInitChart = setInterval(() => {
+                const el = document.getElementById("lgDataBody");
+                if(el && window.Chart) {
+                    initLgApp();
+                    clearInterval(tryInitChart);
+                }
+            }, 500);
+        })();
+      </script>
     </div>
 
   </div>
